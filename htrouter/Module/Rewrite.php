@@ -5,61 +5,51 @@ use HTRouter\ModuleInterface;
 
 class Rewrite implements ModuleInterface {
 
-    protected $_engine = false;
-    protected $_loglevel = 0;
-    protected $_log;
-
     public function init(\HTRouter $router)
     {
-        $router->registerDirective($this, "RewriteBase");
-        $router->registerDirective($this, "RewriteCond");
+//        $router->registerDirective($this, "RewriteBase");
+//        $router->registerDirective($this, "RewriteCond");
         $router->registerDirective($this, "RewriteEngine");
-        $router->registerDirective($this, "RewriteLock");
+//        $router->registerDirective($this, "RewriteLock");
         $router->registerDirective($this, "RewriteLog");
         $router->registerDirective($this, "RewriteLogLevel");
-        $router->registerDirective($this, "RewriteMap");
-        $router->registerDirective($this, "RewriteOptions");
-        $router->registerDirective($this, "RewriteRule");
-    }
-
-    /**
-     * We probably want this inside an abstract class
-     */
-    public function __call($name, $arguments) {
-        if (! preg_match("/Directive$/", $name)) {
-            throw new \BadMethodCallException("Directive registered, but not declared: ".$name);
-        }
+//        $router->registerDirective($this, "RewriteMap");
+//        $router->registerDirective($this, "RewriteOptions");
+//        $router->registerDirective($this, "RewriteRule");
     }
 
     // Everything with *Directive can be called
-    public function rewriteEngineDirective($request) {
-        if (strtolower($request) == "on") {
+    public function rewriteEngineDirective(\HTRequest $request, $line) {
+        if (strtolower($line) == "on") {
             print "engine on";
-            $this->_engine = true;
+            $request->setRewriteEngine(true);
         }
-        if (strtolower($request) == "off") {
+        if (strtolower($line) == "off") {
             print "engine off";
-            $this->_engine = false;
+            $request->setRewriteEngine(false);
         }
     }
 
-    public function rewriteLogLevel($request) {
-        print "RewriteLogLevel called ".$request."<br>\n";
-        if (! is_numeric($request) or $request < 0 or $request > 9) {
-            throw new Exception("RewriteLogLevel must be between 0 and 9");
+    public function rewriteLogLevelDirective(\HTRequest $request, $line) {
+        print "RewriteLogLevel called ".$line."<br>\n";
+        if (! is_numeric($line) or $line < 0 or $line > 9) {
+            throw new \OutOfRangeException("RewriteLogLevel must be between 0 and 9");
         }
-
-        $this->_loglevel = $request;
+        $request->setRewriteLogLevel($line);
     }
 
-    public function rewriteLog($request) {
-        print "RewriteLog called ".$request."<br>\n";
-        $this->_log = $request;
+    public function rewriteLogDirective(\HTRequest $request, $line) {
+        print "RewriteLog called ".$line."<br>\n";
+        $request->setRewriteLog($line);
     }
 
 
-    public function rewriteCondDirective($request) {
-        print "rewriteCondDirective called ".$request."<br>\n";
+    public function rewriteCondDirective(\HTRequest$request, $line) {
+        print "rewriteCondDirective called ".$line."<br>\n";
+    }
+
+    public function getName() {
+        return "rewrite";
     }
 
 }

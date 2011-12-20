@@ -1,30 +1,73 @@
 <?php
 
 class HTRouter {
+    const HTACCESS_FILE = "/wwwroot/router/public/htaccess";
+
     // All registered directives
     protected $_directives = array();
+
+    // All registered hooks
+    protected $_hooks = array();
+
+    protected $_request;
+
+
+    // Hook constants (they are in order of running)
+    const HOOK_PROVIDER_GROUP = 25;
+    const HOOK_CHECK_AUTH = 50;
+
 
     /**
      * Call this to route your stuff with .htaccess rules
      */
     public function route() {
+        // Initialize request
+        $this->_request = new \HTRequest();
+
+        // Initialize all modules
         $this->_initModules();
+
+        // Read htaccess
         $this->_init();
+
+        // Parse htaccess
+        $this->_run();
+
+        // Cleanup
+        $this->_fini();
     }
 
     /**
      * Initializes the modules so directives are known
      */
     protected function _initModules() {
+
+        $path = dirname(__FILE__)."/Module/";
+
         // Read module directory and initialize all modules
-        $it = new \DirectoryIterator(dirname(__FILE__)."/Module");
-        $it = new RegexIterator($it, "/\.php$/");
+        $it = new RecursiveDirectoryIterator($path);
+        $it = new RecursiveIteratorIterator($it);
+        //$it = new RegexIterator($it, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
+
         foreach ($it as $file) {
-            $class = "\\HTRouter\\Module\\".$file->getBaseName(".php");
+            // @TODO: RegexIterator returns a file instead of a FileInfo Object :|
+            if (! preg_match ('/^.+\.php$/i', $file->getBaseName())) continue;
+
+            $p = $file->getPathName();
+            $p = str_replace($path, "", $p);
+            $p = str_replace("/", "\\", $p);
+            $p = str_replace(".php", "", $p);
+            $class = "\\HTRouter\\Module\\".$p;
+
+            print "CLASS: $class <br>\n";
             $module = new $class();
-            // @TODO: Can be done through constructor?
             $module->init($this);
+
+            $this->_modules[] = $module;
         }
+
+        // Order the hooks
+        ksort($this->_hooks);
     }
 
     /**
@@ -32,30 +75,38 @@ class HTRouter {
      * @return mixed
      */
     protected function _init() {
-        print "<li>Looking for .htaccess";
-        if (! file_exists (".htaccess")) {
-            $this->_print_error(".htaccess Not found");
+        // Check HTACCESS
+        if (! file_exists (self::HTACCESS_FILE)) {
+            print "No HTACCESS found";
             return;
         }
 
-        print "<li>Reading .htaccess";
-        print "<br>";
-
-        $htaccess = file(".htaccess");
-        foreach ($htaccess as $line) {
-            print "LINE: ".htmlentities($line)."<br>";
-
+        // Read & parse HTACCESS
+        $htaccessfile = file(self::HTACCESS_FILE);
+        foreach ($htaccessfile as $line) {
+            print "LINE: <font color=blue>".htmlentities($line)."</font><br>";
             $this->_parseLine($line);
         }
-
-        print "<li>Parsing .htaccess";
-        print "<hr>";
     }
 
+    protected function _run() {
+        foreach ($this->_hooks as $key => $hook) {
+            print "<h2>Running hook :".$key."</h2>";
+            foreach ($hook as $item) {
+                foreach ($item as $callback) {
+                    print "<pre>";
+                    print_r($callback);
+                    print "</pre>";
+                    $class = $callback[0];
+                    $method = $callback[1];
+                    $class->$method($this->_request);
+                }
+            }
+        }
+    }
 
-    // @TODO Remove me
-    protected function _print_error($str) {
-        print "<li><font color=red>".$str."</font>";
+    protected function _fini() {
+        // Cleanup
     }
 
 
@@ -63,9 +114,14 @@ class HTRouter {
      * Register a directive
      * @param $directive
      */
-    public function registerDirective($directive, HTRouter\ModuleInterface $module) {
+    public function registerDirective(HTRouter\ModuleInterface $module, $directive) {
         print "Registering: ".$directive."<br>";
         $this->_directives[] = array($module, $directive);
+    }
+
+    public function registerHook($hook, array $callback, $order = 50) {
+        print "Hooking: ".$hook." at order ".$order." <br>";
+        $this->_hooks[$hook][$order][] = $callback;
     }
 
 
@@ -92,8 +148,7 @@ class HTRouter {
 
         // Call it
         $method = $directive."Directive";
-        $module->$method($match[2]);
-
+        $module->$method($this->_request, $match[2]);
     }
 
     /**
@@ -106,6 +161,16 @@ class HTRouter {
             if ($directive == $v[1]) return $v;
         }
         return false;
+    }
+
+
+    function findModule($name) {
+        $name = strtolower($name);
+
+        foreach ($this->_modules as $module) {
+            if (strtolower($module->getName()) == $name) return $module;
+        }
+        return null;
     }
 
 }

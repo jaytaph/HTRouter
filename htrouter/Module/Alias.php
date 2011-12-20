@@ -25,4 +25,8 @@ class Alias implements ModuleInterface {
         print "AliasMatch called ".$request."<br>\n";
     }
 
+    public function getName() {
+        return "alias";
+    }
+
 }

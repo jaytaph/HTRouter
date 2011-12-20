@@ -1,3 +1,9 @@
+AuthType basic
+AuthName "private area52"
+AuthUserFile /wwwroot/router/.htpasswd
+AuthGroupFile /dev/null
+require valid-user
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f
