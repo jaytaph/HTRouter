@@ -1,4 +1,7 @@
 <?php
+/**
+ * Core module. Most of these directives we probably won't need.
+ */
 
 namespace HTRouter\Module;
 use HTRouter\ModuleInterface;
@@ -13,7 +16,7 @@ class Core implements ModuleInterface {
         return "core";
     }
 
-
+    // Core Directives (Apache 2.2.x)
     // AcceptPathInfo
     // AccessFileName
     // AddDefaultCharset

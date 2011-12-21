@@ -9,3 +9,6 @@ $ php -S 127.0.0.1:8080 -t router.php
 
 The router script should read and interpret the .htaccess file found in the current directory and rewrite / fetch
 the actual file it needs.
+
+
+

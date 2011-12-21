@@ -9,20 +9,32 @@ class HTRouter {
     // All registered hooks
     protected $_hooks = array();
 
+    // All registered providers
+    protected $_providers = array();
+
+    // The HTTP request
     protected $_request;
 
 
+    // Provider constants
+    const PROVIDER_AUTHN_GROUP = 25;
+
     // Hook constants (they are in order of running)
-    const HOOK_PROVIDER_GROUP = 25;
     const HOOK_CHECK_AUTH = 50;
 
+    function __construct() {
+        // Initialize request
+        $this->_request = new \HTRequest();
+    }
+
+    function getRequest() {
+        return $this->_request;
+    }
 
     /**
      * Call this to route your stuff with .htaccess rules
      */
     public function route() {
-        // Initialize request
-        $this->_request = new \HTRequest();
 
         // Initialize all modules
         $this->_initModules();
@@ -59,7 +71,6 @@ class HTRouter {
             $p = str_replace(".php", "", $p);
             $class = "\\HTRouter\\Module\\".$p;
 
-            print "CLASS: $class <br>\n";
             $module = new $class();
             $module->init($this);
 
@@ -75,9 +86,8 @@ class HTRouter {
      * @return mixed
      */
     protected function _init() {
-        // Check HTACCESS
+        // Check existance of HTACCESS
         if (! file_exists (self::HTACCESS_FILE)) {
-            print "No HTACCESS found";
             return;
         }
 
@@ -91,12 +101,8 @@ class HTRouter {
 
     protected function _run() {
         foreach ($this->_hooks as $key => $hook) {
-            print "<h2>Running hook :".$key."</h2>";
             foreach ($hook as $item) {
                 foreach ($item as $callback) {
-                    print "<pre>";
-                    print_r($callback);
-                    print "</pre>";
                     $class = $callback[0];
                     $method = $callback[1];
                     $class->$method($this->_request);
@@ -115,13 +121,42 @@ class HTRouter {
      * @param $directive
      */
     public function registerDirective(HTRouter\ModuleInterface $module, $directive) {
-        print "Registering: ".$directive."<br>";
         $this->_directives[] = array($module, $directive);
     }
 
     public function registerHook($hook, array $callback, $order = 50) {
-        print "Hooking: ".$hook." at order ".$order." <br>";
         $this->_hooks[$hook][$order][] = $callback;
+    }
+
+    public function registerProvider($provider, HTRouter\ModuleInterface $module) {
+        $this->_providers[$provider][] = $module;
+    }
+
+    /**
+     * Check if directive exists, and return the module entry which holds this directive
+     * @param $directive
+     * @return bool
+     */
+    protected function _directiveExists($directive) {
+        foreach ($this->_directives as $v) {
+            if ($directive == $v[1]) return $v;
+        }
+        return false;
+    }
+
+    function getProviders($provider) {
+        if (! isset($this->_providers[$provider])) return array();
+        return $this->_providers[$provider];
+    }
+
+
+    function findModule($name) {
+        $name = strtolower($name);
+
+        foreach ($this->_modules as $module) {
+            if (strtolower($module->getName()) == $name) return $module;
+        }
+        return null;
     }
 
 
@@ -149,28 +184,6 @@ class HTRouter {
         // Call it
         $method = $directive."Directive";
         $module->$method($this->_request, $match[2]);
-    }
-
-    /**
-     * Check if directive exists, and return the module entry which holds this directive
-     * @param $directive
-     * @return bool
-     */
-    function _directiveExists($directive) {
-        foreach ($this->_directives as $v) {
-            if ($directive == $v[1]) return $v;
-        }
-        return false;
-    }
-
-
-    function findModule($name) {
-        $name = strtolower($name);
-
-        foreach ($this->_modules as $module) {
-            if (strtolower($module->getName()) == $name) return $module;
-        }
-        return null;
     }
 
 }

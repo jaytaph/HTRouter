@@ -1,4 +1,7 @@
 <?php
+/**
+ * Alias module
+ */
 
 namespace HTRouter\Module;
 use HTRouter\ModuleInterface;
