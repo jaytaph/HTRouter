@@ -16,19 +16,46 @@ class HTRouter {
     protected $_request;
 
 
-    // Provider constants
+    // Provider constants. Order / number is irrelevant.
     const PROVIDER_AUTHN_GROUP = 10;
     const PROVIDER_AUTHZ_GROUP = 15;
 
-    // Hook constants (they are in order of running)
-    const HOOK_CHECK_AUTHN = 50;
-    const HOOK_CHECK_AUTHZ = 55;
+    // Hook constants (they are in order of running and as defined by Apache)
+    const HOOK_PRE_CONFIG           =  5;
+    const HOOK_POST_CONFIG          = 10;
+    const HOOK_OPEN_LOGS            = 15;
+    const HOOK_CHILD_INIT           = 20;
+    const HOOK_HANDLER              = 25;
+    const HOOK_QUICK_HANDLER        = 30;
+    const HOOK_PRE_CONNECTION       = 35;
+    const HOOK_PROCESS_CONNECTION   = 40;
+    const HOOK_POST_READ_REQUEST    = 45;
+    const HOOK_LOG_TRANSACTION      = 50;
+    const HOOK_TRANSLATE_NAME       = 55;
+    const HOOK_MAP_TO_STORAGE       = 60;
+    const HOOK_HEADER_PARSER        = 65;
+    const HOOK_CHECK_USER_ID        = 70;
+    const HOOK_FIXUPS               = 75;
+    const HOOK_CHECK_TYPE           = 80;
+    const HOOK_CHECK_ACCESS         = 85;
+    const HOOK_CHECK_AUTHN          = 90;
+    const HOOK_CHECK_AUTHZ          = 95;
+    const HOOK_INSERT_FILTER       = 100;
 
+
+    /**
+     * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
+     */
     function __construct() {
         // Initialize request
         $this->_request = new \HTRequest();
     }
 
+    /**
+     * Returns the current request of the router.
+     *
+     * @return HTRequest
+     */
     function getRequest() {
         return $this->_request;
     }
@@ -84,7 +111,9 @@ class HTRouter {
     }
 
     /**
-     * Init .htaccess routing
+     * Init .htaccess routing by parsing all htaccess lines and check for validity (at least, check if the directives
+     * are known) and set data inside the request.
+     *
      * @return mixed
      */
     protected function _init() {
@@ -101,10 +130,16 @@ class HTRouter {
         }
     }
 
+    /**
+     * Run the actual hooked plugins. It should be just as simple as stated here..
+     */
     protected function _run() {
-        foreach ($this->_hooks as $key => $hook) {
-            foreach ($hook as $item) {
-                foreach ($item as $callback) {
+        // Run each hook in order
+        foreach ($this->_hooks as $hook) {
+            // Every hook as 0 or more "modules" hooked
+            foreach ($hook as $modules) {
+                // Every module has 0 or more callbacks
+                foreach ($modules as $callback) {
                     $class = $callback[0];
                     $method = $callback[1];
                     $class->$method($this->_request);
@@ -113,29 +148,49 @@ class HTRouter {
         }
     }
 
+    /**
+     * Cleanup stuff, if needed
+     */
     protected function _fini() {
         // Cleanup
     }
 
 
     /**
-     * Register a directive
+     * Register a directive, a keyword that can be read from htaccess file
      * @param $directive
      */
     public function registerDirective(HTRouter\ModuleInterface $module, $directive) {
         $this->_directives[] = array($module, $directive);
     }
 
+    /**
+     * Register a hook
+     *
+     * @param $hook
+     * @param array $callback The callback to the module->method
+     * @param int $order Order (0-100) of the modules that are added to the specified hook
+     */
     public function registerHook($hook, array $callback, $order = 50) {
+        // We can register our hooks with the "order".
+        // Apache defines APR_HOOK_[FIRST|MIDDLE|LAST]. We don't use that but use a simple ordering from 0-100.
         $this->_hooks[$hook][$order][] = $callback;
     }
 
+    /**
+     * Providers are not really hooks, but can be used for modules to add functionality. A good example
+     * would be to register the authn_basic and authn_digest types.
+     *
+     * @param $provider
+     * @param HTRouter\ModuleInterface $module
+     */
     public function registerProvider($provider, HTRouter\ModuleInterface $module) {
         $this->_providers[$provider][] = $module;
     }
 
     /**
      * Check if directive exists, and return the module entry which holds this directive
+     *
      * @param $directive
      * @return bool
      */
@@ -146,12 +201,21 @@ class HTRouter {
         return false;
     }
 
+    /**
+     * Get all data for specified provider. Normally this would be a list of objects conforming a specific interface.
+     *
+     * @param $provider
+     * @return array
+     */
     function getProviders($provider) {
         if (! isset($this->_providers[$provider])) return array();
         return $this->_providers[$provider];
     }
 
 
+    /**
+     * Find specified module
+     */
     function findModule($name) {
         $name = strtolower($name);
 
@@ -162,9 +226,19 @@ class HTRouter {
     }
 
 
-    // Parse a line
+    /**
+     * Parse a line from the htaccess file
+     *
+     * @param $line
+     * @return null
+     */
     function _parseLine($line) {
         $line = trim($line);
+
+        // Check if it's a comment line
+        if ($line[0] == "#") return;
+
+        // @TODO: Must we strip comments at the end of the file
 
         // First word is the directive
         if (! preg_match("/^(\w+) (.+)/", $line, $match)) {
@@ -172,24 +246,24 @@ class HTRouter {
             return null;
         }
 
-        // Find registered directive entry
+        // Find registered directive
         $tmp = $this->_directiveExists($match[1]);
         if (!$tmp) {
             // Unknown directive found
             return null;
         }
 
-        // Find module + directive
-        $module = $tmp[0];
-        $directive = $tmp[1];
-
-        // Call it
-        $method = $directive."Directive";
+        // Call the <keyword>Directive() function inside the corresponding module
+        $module = $tmp[0];      // Object
+        $method = $tmp[1]."Directive";   // Method
         $module->$method($this->_request, $match[2]);
     }
 
 
 
+    /**
+     * Returns a 401 response to the client, and exists
+     */
     function createAuthenticateResponse() {
         // We are not authorized. Return a 401
         $plugin = $this->_request->getAuthType();
