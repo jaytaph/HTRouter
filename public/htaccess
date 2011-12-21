@@ -6,6 +6,13 @@ require user johndoe joshua
 require user somebodyelse
 require valid-user
 
+#allow from 192.168.0.0/255.255.0.0
+allow from env=test
+allow from env=!notsettest
+
+#deny 192.168.56
+order allow,deny
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} !-f

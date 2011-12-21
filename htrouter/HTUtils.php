@@ -4,8 +4,16 @@
  */
 
 class HTUtils {
+
+    /**
+     * Validate an encrypted/hashed password. Handles different hash-methods
+     * @param $passwd
+     * @param $hash
+     * @return bool
+     * @throws LogicException
+     */
     function validatePassword($passwd, $hash) {
-        if (substr($hash, 0, 6) == "$apr1$") {
+        if (substr($hash, 0, 6) == "\$apr1\$") {
             // Can't do APR's MD5
             throw new LogicException("Cannot verify APR1 encoded passwords.");
         }

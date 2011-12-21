@@ -233,7 +233,9 @@ class HTRouter {
      * @return null
      */
     function _parseLine($line) {
+        // trim line
         $line = trim($line);
+        if (empty($line)) return;
 
         // Check if it's a comment line
         if ($line[0] == "#") return;
@@ -271,6 +273,16 @@ class HTRouter {
         // Return a 401
         header('HTTP/1.1 401 Unauthorized');
         header('WWW-Authenticate: '.$plugin->getAuthType().' realm="'.$this->_request->getAuthName().'"');
+        exit;
+    }
+
+    /**
+     * Returns a 401 response to the client, and exists
+     */
+    function createForbiddenResponse() {
+        // Return a 403
+        header('HTTP/1.1 403 Forbidden');
+        print "Forbidden";
         exit;
     }
 
