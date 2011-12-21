@@ -2,6 +2,8 @@ AuthType basic
 AuthName "private area52"
 AuthUserFile /wwwroot/router/.htpasswd
 AuthGroupFile /dev/null
+require user johndoe joshua
+require user somebodyelse
 require valid-user
 
 <IfModule mod_rewrite.c>

@@ -3,9 +3,14 @@
 use HTRouter\ModuleInterface;
 
 abstract class AuthModule implements ModuleInterface {
-    const AUTH_NOT_FOUND    = 1;
-    const AUTH_GRANTED      = 2;
-    const AUTH_DENIED       = 3;
+
+    const AUTH_GRANTED      = 1;
+    const AUTH_DENIED       = 2;
+    const AUTH_NOT_FOUND    = 3;
+
+    const AUTHZ_GRANTED      = 1;
+    const AUTHZ_DENIED       = 2;
+    const AUTHZ_NOT_FOUND    = 3;
 
     public function init(\HTRouter $router)
     {

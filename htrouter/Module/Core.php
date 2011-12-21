@@ -10,7 +10,13 @@ class Core implements ModuleInterface {
 
     public function init(\HTRouter $router)
     {
+        $router->registerDirective($this, "require");
     }
+
+    public function requireDirective(\HTRequest $request, $line) {
+        $request->appendRequire($line);
+    }
+
 
     public function getName() {
         return "core";

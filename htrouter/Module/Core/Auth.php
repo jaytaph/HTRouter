@@ -11,7 +11,8 @@ class Auth implements ModuleInterface {
         $router->registerDirective($this, "AuthName");
         $router->registerDirective($this, "AuthType");
 
-        $router->registerHook(\HTRouter::HOOK_CHECK_AUTH, array($this, "checkAuthentication"));
+        $router->registerHook(\HTRouter::HOOK_CHECK_AUTHN, array($this, "checkAuthentication"));
+        $router->registerHook(\HTRouter::HOOK_CHECK_AUTHZ, array($this, "checkAuthorization"));
 
         // Add extra info, like authentication and stuff
         $httpHeaders = apache_request_headers();
@@ -22,6 +23,29 @@ class Auth implements ModuleInterface {
         }
 
         $this->_router = $router;
+    }
+
+    public function checkAuthorization(\HTRequest $request) {
+        // Iterator through all the registered providers
+        $providers = $this->_router->getProviders(\HTRouter::PROVIDER_AUTHZ_GROUP);
+        foreach ($providers as $provider) {
+            $result = $provider->checkUserAccess($request);
+
+            // Denied or granted means we should stop processing.
+            if ($result == \AuthModule::AUTHZ_DENIED ||
+                $result == \AuthModule::AUTHZ_GRANTED) {
+                break;
+            }
+        }
+
+
+        if ($result != \AuthModule::AUTHZ_GRANTED) {
+            // Let user authenticate
+            $this->_router->createAuthenticateResponse();
+            exit;
+        }
+
+        return true;
     }
 
     public function checkAuthentication(\HTRequest $request) {
@@ -39,9 +63,8 @@ class Auth implements ModuleInterface {
         }
 
         if ($result != \AuthModule::AUTH_GRANTED) {
-            // Return a 401
-            header('HTTP/1.1 401 Unauthorized');
-            header('WWW-Authenticate: '.$plugin->getAuthType().' realm="'.$request->getAuthName().'"');
+            // Let user authenticate
+            $this->_router->createAuthenticateResponse();
             exit;
         }
 
@@ -49,6 +72,8 @@ class Auth implements ModuleInterface {
     }
 
     public function authNameDirective(\HTRequest $request, $line) {
+        $line = trim($line);
+        $line = trim($line, "\"\'");
         $request->setAuthName($line);
     }
 

@@ -17,10 +17,12 @@ class HTRouter {
 
 
     // Provider constants
-    const PROVIDER_AUTHN_GROUP = 25;
+    const PROVIDER_AUTHN_GROUP = 10;
+    const PROVIDER_AUTHZ_GROUP = 15;
 
     // Hook constants (they are in order of running)
-    const HOOK_CHECK_AUTH = 50;
+    const HOOK_CHECK_AUTHN = 50;
+    const HOOK_CHECK_AUTHZ = 55;
 
     function __construct() {
         // Initialize request
@@ -184,6 +186,18 @@ class HTRouter {
         // Call it
         $method = $directive."Directive";
         $module->$method($this->_request, $match[2]);
+    }
+
+
+
+    function createAuthenticateResponse() {
+        // We are not authorized. Return a 401
+        $plugin = $this->_request->getAuthType();
+
+        // Return a 401
+        header('HTTP/1.1 401 Unauthorized');
+        header('WWW-Authenticate: '.$plugin->getAuthType().' realm="'.$this->_request->getAuthName().'"');
+        exit;
     }
 
 }
