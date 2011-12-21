@@ -149,10 +149,10 @@ class Host Extends \AuthzModule {
                     return true;
                     break;
                 case "ip" :
-                    if ($utils->checkMatchingIP($entry->ip, $this->_request->getIp())) return true;
+                    if ($utils->checkMatchingIP($entry->ip, $this->_router->getRequest()->getIp())) return true;
                     break;
                 case "host" :
-                    if ($utils->checkMatchingHost($entry->host, $this->_request->getHost())) return true;
+                    if ($utils->checkMatchingHost($entry->host, $this->_router->getRequest()->getHost())) return true;
                     break;
                 default:
                     throw new \LogicException("Unknown entry type: ".$entry->type);
@@ -196,6 +196,8 @@ class Host Extends \AuthzModule {
 
             if (strchr($item, "/")) {
                 // IP with subnet mask or cidr
+                $entry->type = "ip";
+                $entry->ip = $line;
                 $entries[] = $entry;
                 continue;
             }

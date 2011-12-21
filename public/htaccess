@@ -7,11 +7,16 @@ require user somebodyelse
 require valid-user
 
 #allow from 192.168.0.0/255.255.0.0
-allow from env=test
-allow from env=!notsettest
+#allow from env=test
+#allow from env=!notsettest
+#allow from all
+#deny from all
 
-#deny 192.168.56
-order allow,deny
+deny from 192.168
+#allow from 192.168.56
+allow from 192.168.56.0/255.255.255.128
+deny from 192.168.56.0/31
+order deny,allow
 
 <IfModule mod_rewrite.c>
     RewriteEngine On

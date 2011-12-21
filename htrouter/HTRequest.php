@@ -37,4 +37,9 @@ class HTRequest {
         $this->_vars['environment'][$key] = $val;
     }
 
+
+    function getIp() {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+
 }
