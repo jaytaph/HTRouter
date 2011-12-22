@@ -28,12 +28,19 @@ class User Extends \AuthzModule {
     }
 
     public function checkUserAccess(\HTRequest $request) {
+        // Any will do, and we are already authenticted through the "allow/deny" rules. No Need to check this.
+        // @TODO: This code must be moved to HTRouter::_run()
+        if ($request->getSatisfy() == "any" && $request->getAuthorized()) {
+            return \AuthModule::AUTHZ_GRANTED;
+        }
+
         $requires = $request->getRequire();
         foreach ($requires as $require) {
             if (strtolower($require) == "valid-user") {
                 // Set the authorized user inside the request
                 $user = $request->getAuthenticatedUser();
                 $request->setAuthorizedUser($user);
+                $request->setIsAuthorized(true);
                 return \AuthModule::AUTHZ_GRANTED;
             }
 
@@ -49,6 +56,7 @@ class User Extends \AuthzModule {
                 if ($user == $request->getAuthenticatedUser()) {
                     // Set the authorized user inside the request
                     $request->setAuthorizedUser($user);
+                    $request->setIsAuthorized(true);
                     return \AuthModule::AUTHZ_GRANTED;
                 }
             }

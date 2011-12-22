@@ -41,6 +41,7 @@ class Basic extends \AuthModule {
         // Set the authenticated user inside the request
         if ($result == \AuthModule::AUTH_GRANTED) {
             $request->setAuthenticatedUser($user);
+            $request->setIsAuthenticated(true);
         }
         return $result;
     }

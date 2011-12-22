@@ -134,6 +134,8 @@ class HTRouter {
      * Run the actual hooked plugins. It should be just as simple as stated here..
      */
     protected function _run() {
+        // @TODO: This must be mapped onto the same logic more or less as found in request.c:ap_process_request_internal()
+
         // Run each hook in order
         foreach ($this->_hooks as $hook) {
             // Every hook as 0 or more "modules" hooked

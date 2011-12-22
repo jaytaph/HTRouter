@@ -127,27 +127,16 @@ class HTUtils {
 
 
     function checkMatchingHost($src, $dst) {
-        /**
-         * Hosts whose names match, or end in, this string are allowed access. Only complete components are matched,
-         * so the above example will match foo.apache.org but it will not match fooapache.org. This configuration will
-         * cause Apache to perform a double reverse DNS lookup on the client IP address, regardless of the setting of
-         * the HostnameLookups directive. It will do a reverse DNS lookup on the IP address to find the associated
-         * hostname, and then do a forward lookup on the hostname to assure that it matches the original IP address.
-         * Only if the forward and reverse DNS are consistent and the hostname matches will access be allowed.
-         */
-        print "SRC: $src <br>\n";
-        print "DST: $dst <br>\n";
-
         // Do a double reverse check
         $dst_name = gethostbyaddr($dst);
         $reversed_dst_ip = gethostbyname($dst_name);
 
         if (strcmp($dst, $reversed_dst_ip) !== 0) {
-            // Reverse IP does not match!
+            // Reversed IP does not match!
             return false;
         }
 
-        // Check if substring matches
+        // Check if complete string matches
         if (strcmp($src, $dst_name) === 0) {
             // Complete match
             return true;
@@ -161,10 +150,11 @@ class HTUtils {
         // Check if substring matches
         $matchpart = substr($dst_name, 0-strlen($src));
         if ($matchpart == $src) {
-            // Complete match
+            // Partial match is ok
             return true;
         }
 
+        return false;
     }
 
 }

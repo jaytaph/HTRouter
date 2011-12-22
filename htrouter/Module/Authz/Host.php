@@ -1,6 +1,7 @@
 <?php
 /**
  * Access module
+ *
  */
 
 namespace HTRouter\Module\Authz;
@@ -26,9 +27,6 @@ class Host Extends \AuthzModule {
 
         // Default value
         $router->getRequest()->setAccessOrder(self::DENY_THEN_ALLOW);
-
-        // @TODO: Remove debug things
-        $router->getRequest()->appendEnvironment("test", 1);
     }
 
 
@@ -121,13 +119,25 @@ class Host Extends \AuthzModule {
 
         // Not ok. Now we need to check if "satisfy any" already got a satisfaction
         if ($result == false) {
+            if ($request->getSatisfy() == "any") {
+                // Check if there is at least one require line in the htaccess. If found, it means that
+                // we still have to possibility that we can be authorized
 
-            // @TODO: Check satisfy
+                $requires = $request->getRequire();
+                if (is_array($requires) and count($requires) > 0) {
+                    // It's ok, we have at least 1 require statement, so we return true nevertheless
+                    $request->setAuthorized(true);
+                    return true;
+                }
+            }
+
+            // Not ok. Satisfy ALL or we didn't find a "require"
             $this->_router->createForbiddenResponse();
             exit;
         }
 
         // Everything is ok
+        $request->setAuthorized(true);
         return true;
     }
 

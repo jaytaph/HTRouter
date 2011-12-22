@@ -25,9 +25,10 @@ class Rewrite implements ModuleInterface {
     public function rewriteEngineDirective(\HTRequest $request, $line) {
         if (strtolower($line) == "on") {
             $request->setRewriteEngine(true);
-        }
-        if (strtolower($line) == "off") {
+        } else if (strtolower($line) == "off") {
             $request->setRewriteEngine(false);
+        } else {
+            throw new \UnexpectedValueException("Must be on or off");
         }
     }
 

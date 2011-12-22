@@ -38,7 +38,6 @@ class Auth implements ModuleInterface {
             }
         }
 
-
         if ($result != \AuthModule::AUTHZ_GRANTED) {
             // Let user authenticate
             $this->_router->createAuthenticateResponse();

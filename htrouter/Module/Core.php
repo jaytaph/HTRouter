@@ -11,10 +11,24 @@ class Core implements ModuleInterface {
     public function init(\HTRouter $router)
     {
         $router->registerDirective($this, "require");
+        $router->registerDirective($this, "satisfy");
+
+        // Default values
+        $router->getRequest()->setSatisfy("all");
     }
 
     public function requireDirective(\HTRequest $request, $line) {
         $request->appendRequire($line);
+    }
+
+    public function satisfyDirective(\HTRequest $request, $line) {
+        if (strtolower($line) == "all") {
+            $request->setSatisfy("all");
+        } elseif (strtolower($line) == "any") {
+            $request->setSatisfy("any");
+        } else {
+            throw new \UnexpectedValueException("Satisfy must be either 'all' or 'any'");
+        }
     }
 
 
