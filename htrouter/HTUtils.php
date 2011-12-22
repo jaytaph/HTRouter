@@ -122,6 +122,48 @@ class HTUtils {
 
         // Compare the number of cidr-bits
         return (substr_compare($bin_src, $bin_dst, 0, $cidr) === 0);
+    }
+
+
+
+    function checkMatchingHost($src, $dst) {
+        /**
+         * Hosts whose names match, or end in, this string are allowed access. Only complete components are matched,
+         * so the above example will match foo.apache.org but it will not match fooapache.org. This configuration will
+         * cause Apache to perform a double reverse DNS lookup on the client IP address, regardless of the setting of
+         * the HostnameLookups directive. It will do a reverse DNS lookup on the IP address to find the associated
+         * hostname, and then do a forward lookup on the hostname to assure that it matches the original IP address.
+         * Only if the forward and reverse DNS are consistent and the hostname matches will access be allowed.
+         */
+        print "SRC: $src <br>\n";
+        print "DST: $dst <br>\n";
+
+        // Do a double reverse check
+        $dst_name = gethostbyaddr($dst);
+        $reversed_dst_ip = gethostbyname($dst_name);
+
+        if (strcmp($dst, $reversed_dst_ip) !== 0) {
+            // Reverse IP does not match!
+            return false;
+        }
+
+        // Check if substring matches
+        if (strcmp($src, $dst_name) === 0) {
+            // Complete match
+            return true;
+        }
+
+        // Add a . in front if needed so "apache.org" matches "foo.apache.org", but not "test.fooapache.org"
+        if ($src[0] != ".") {
+            $src = "." . $src;
+        }
+
+        // Check if substring matches
+        $matchpart = substr($dst_name, 0-strlen($src));
+        if ($matchpart == $src) {
+            // Complete match
+            return true;
+        }
 
     }
 

@@ -152,7 +152,7 @@ class Host Extends \AuthzModule {
                     if ($utils->checkMatchingIP($entry->ip, $this->_router->getRequest()->getIp())) return true;
                     break;
                 case "host" :
-                    if ($utils->checkMatchingHost($entry->host, $this->_router->getRequest()->getHost())) return true;
+                    if ($utils->checkMatchingHost($entry->host, $this->_router->getRequest()->getIp())) return true;
                     break;
                 default:
                     throw new \LogicException("Unknown entry type: ".$entry->type);
@@ -201,7 +201,7 @@ class Host Extends \AuthzModule {
                 $entries[] = $entry;
                 continue;
             }
-            if (preg_match("/[\d\.]+/", $line)) {
+            if (preg_match("/^[\d\.]+$/", $line)) {
                 // Looks like it's an IP or partial IP
                 $entry->type = "ip";
                 $entry->ip = $line;
