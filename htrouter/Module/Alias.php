@@ -28,10 +28,8 @@ class Alias implements ModuleInterface {
         $redirect->http_status = 302;   // temporary status by default
         $redirect->http_status = "Found";
 
-
         // parse argument list
         $args = explode(" ", $line);
-
         if (count($args) == 3) {
             // We have 3 arguments, which means the first argument is the 'status'
             $redirect->http_status = 0;
