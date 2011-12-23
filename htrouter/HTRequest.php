@@ -42,4 +42,8 @@ class HTRequest {
         return $_SERVER['REMOTE_ADDR'];
     }
 
+    function getDocumentRoot() {
+        return $_SERVER['DOCUMENT_ROOT'];
+    }
+
 }

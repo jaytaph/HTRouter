@@ -1,7 +1,7 @@
 <?php
 
 class HTRouter {
-    const HTACCESS_FILE = "/wwwroot/router/public/htaccess";
+    const HTACCESS_FILE = ".htaccess";
 
     // All registered directives
     protected $_directives = array();
@@ -88,10 +88,10 @@ class HTRouter {
         // Read module directory and initialize all modules
         $it = new RecursiveDirectoryIterator($path);
         $it = new RecursiveIteratorIterator($it);
-        //$it = new RegexIterator($it, '/^.+\.php$/i', RecursiveRegexIterator::GET_MATCH);
 
         foreach ($it as $file) {
             // @TODO: RegexIterator returns a file instead of a FileInfo Object :|
+            // @TODO: RecursiveFilterIterator instead of this...
             if (! preg_match ('/^.+\.php$/i', $file->getBaseName())) continue;
 
             $p = $file->getPathName();
@@ -117,14 +117,16 @@ class HTRouter {
      * @return mixed
      */
     protected function _init() {
-        // Check existance of HTACCESS
-        if (! file_exists (self::HTACCESS_FILE)) {
+        $htaccessPath = $this->_request->getDocumentRoot() . "/" . self::HTACCESS_FILE;
+
+        // Check existence of HTACCESS
+        if (! file_exists ($htaccessPath)) {
             return;
         }
 
         // Read & parse HTACCESS
-        $htaccessfile = file(self::HTACCESS_FILE);
-        foreach ($htaccessfile as $line) {
+        $htaccessFile = file($htaccessPath);
+        foreach ($htaccessFile as $line) {
             print "LINE: <font color=blue>".htmlentities($line)."</font><br>";
             $this->_parseLine($line);
         }
