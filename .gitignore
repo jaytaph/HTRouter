@@ -1,3 +1,4 @@
 .idea
 .htpasswd
 phar/htrouter.phar
+.htaccess
