@@ -166,4 +166,16 @@ class HTUtils {
     function isUrl($url) {
         return (parse_url($url) !== false);
     }
+
+
+    function fetchDirectiveFlags($line, $values) {
+        $line = strtolower($line);
+
+        if (! in_array($line, array_keys($values))) {
+            throw new \UnexpectedValueException("Must be either: ". join(", ", array_keys($values)));
+        }
+
+        return $values[$line];
+    }
+
 }

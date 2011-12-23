@@ -16,7 +16,6 @@ class Core implements ModuleInterface {
         // Default values
         $router->getRequest()->setSatisfy("all");
 
-
         // Set the (default) request URI. This might be changed or rewritten
         $router->getRequest()->setURI($_SERVER['REQUEST_URI']);
     }
@@ -26,13 +25,9 @@ class Core implements ModuleInterface {
     }
 
     public function satisfyDirective(\HTRequest $request, $line) {
-        if (strtolower($line) == "all") {
-            $request->setSatisfy("all");
-        } elseif (strtolower($line) == "any") {
-            $request->setSatisfy("any");
-        } else {
-            throw new \UnexpectedValueException("Satisfy must be either 'all' or 'any'");
-        }
+        $utils = new \HTUtils();
+        $value = $utils->fetchDirectiveFlags($line, array("all" => "all", "any" => "any"));
+        $request->setSatisfy($value);
     }
 
 
@@ -63,11 +58,9 @@ class Core implements ModuleInterface {
     // LimitRequestBody
     // LimitXMLRequestBody
     // Options
-    // Require
     // RLimitCPU
     // RLimitMEM
     // RLimitNPROC
-    // Satisfy
     // ScriptInterpreterSource
     // ServerSignature
     // SetHandler

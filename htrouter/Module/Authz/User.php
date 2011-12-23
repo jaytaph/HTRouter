@@ -20,11 +20,9 @@ class User Extends \AuthzModule {
     }
 
     public function AuthzUserAuthoritativeDirective(\HTRequest $request, $line) {
-        $line = strtolower(trim($line));
-        if ($line != "on" and $line != "off") {
-            throw new \DomainException("AuthzUserAuthoritative must be on or off");
-        }
-        $request->setAuthzUserAuthoritative($line);
+        $utils = new \HTUtils();
+        $value = $utils->fetchDirectiveFlags($line, array("on" => "on", "off" => "off"));
+        $request->setAuthzUserAuthoritative($value);
     }
 
     public function checkUserAccess(\HTRequest $request) {

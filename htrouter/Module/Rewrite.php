@@ -23,13 +23,9 @@ class Rewrite implements ModuleInterface {
 
     // Everything with *Directive can be called
     public function rewriteEngineDirective(\HTRequest $request, $line) {
-        if (strtolower($line) == "on") {
-            $request->setRewriteEngine(true);
-        } else if (strtolower($line) == "off") {
-            $request->setRewriteEngine(false);
-        } else {
-            throw new \UnexpectedValueException("Must be on or off");
-        }
+        $utils = new \HTUtils();
+        $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
+        $request->setRewriteEngine($value);
     }
 
     public function rewriteLogLevelDirective(\HTRequest $request, $line) {

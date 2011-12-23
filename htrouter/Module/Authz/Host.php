@@ -63,15 +63,11 @@ class Host Extends \AuthzModule {
         // Funny.. Apache does a strcmp on "allow,deny", so you can't have "allow, deny" spaces in between.
         // So we shouldn't allow it either.
 
-        if ($line == "allow,deny") {
-            $request->setAccessOrder(self::ALLOW_THEN_DENY);
-        } elseif ($line == "deny,allow") {
-            $request->setAccessOrder(self::DENY_THEN_ALLOW);
-        } elseif ($line == "mutual-failure") {
-            $request->setAccessOrder(self::MUTUAL_FAILURE);
-        } else {
-            throw new \DomainException("Unknown order: ".$line);
-        }
+        $utils = new \HTUtils();
+        $value = $utils->fetchDirectiveFlags($line, array("allow,deny" => self::ALLOW_THEN_DENY,
+                                                          "deny,allow" => self::DENY_THEN_ALLOW,
+                                                          "mutual-failure" => self::MUTUAL_FAILURE));
+        $request->setAccessOrder($value);
     }
 
 
