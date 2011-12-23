@@ -4,6 +4,7 @@
 @unlink('htrouter.phar');
 $phar = new Phar('htrouter.phar', 0, 'htrouter.phar');
 
+
 $basePath = realpath(dirname(__FILE__)."/..");
 
 // Create iterator
@@ -13,7 +14,7 @@ $it = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::SELF_FIRST);
 $phar->buildFromIterator($it, realpath($basePath."/.."));
 
 // Add stub
-$phar->setStub($phar->createDefaultStub('hrouter/public/router.php', 'hrouter/public/router.php'));
+$phar->setStub($phar->createDefaultStub('router/public/router.php', 'router/public/router.php'));
 
 
 /**
