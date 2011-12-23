@@ -1,2 +1,3 @@
 .idea
 .htpasswd
+phar/htrouter.phar
