@@ -157,4 +157,13 @@ class HTUtils {
         return false;
     }
 
+
+    /**
+     * Returns true when the URL is - in fact - an URL (the lazy way)
+     * @param $url
+     * @return bool
+     */
+    function isUrl($url) {
+        return (parse_url($url) !== false);
+    }
 }

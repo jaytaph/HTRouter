@@ -15,6 +15,10 @@ class Core implements ModuleInterface {
 
         // Default values
         $router->getRequest()->setSatisfy("all");
+
+
+        // Set the (default) request URI. This might be changed or rewritten
+        $router->getRequest()->setURI($_SERVER['REQUEST_URI']);
     }
 
     public function requireDirective(\HTRequest $request, $line) {

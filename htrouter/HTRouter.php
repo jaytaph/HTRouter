@@ -284,7 +284,12 @@ class HTRouter {
     function createForbiddenResponse() {
         // Return a 403
         header('HTTP/1.1 403 Forbidden');
-        print "Forbidden";
+        exit;
+    }
+
+    function createRedirect($code, $status, $url = "") {
+        header("HTTP/1.1 $code $status");
+        if ($url != "") header("Location: ".$url);  // No URL when "GONE"
         exit;
     }
 

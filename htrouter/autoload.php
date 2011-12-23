@@ -5,6 +5,9 @@
  */
 spl_autoload_register("htrouter_autoloader");
 
+// Generic apache functionality
+include "Apache.php";
+
 function htrouter_autoloader($class) {
 
     // We need to strip HTROUTER\\ namespace
