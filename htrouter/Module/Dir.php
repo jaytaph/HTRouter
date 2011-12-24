@@ -37,15 +37,9 @@ class Dir implements ModuleInterface {
     }
 
     public function FallbackResourceDirective(\HTRequest $request, $line) {
+        $request->setFallbackResource($line);
     }
 
-    /**
-     * Honestly, I have no idea what DFLT stands for :(
-     * @param \HTRequest $request
-     */
-    public function fixup_dflt(\HTRequest $request) {
-
-    }
 
     public function fixup_dir(\HTRequest $request) {
         $utils = new \HTUtils();
@@ -73,16 +67,7 @@ class Dir implements ModuleInterface {
         $names = $request->getDirectoryIndex();
         $names[] = self::DEFAULT_DIRECTORY_INDEX_FILE;        // @TODO: Seriously wrong. This needs to be placed in config?
         foreach ($names as $name) {
-            $url = parse_url($request->getUri());
-
-            // Is it an absolute url?
-            if ($name[0] == "/") {
-                $url['path'] = $name;   // Replace
-            } else {
-                $url['path'] .= $name;  // Append
-            }
-            $url = $utils->unparse_url($url);
-
+            $url = $this->_updateUrl($request->getUri(), $name);
             if ($utils->findUriFileType($request, $url) != \HTUtils::URI_FILETYPE_MISSING) {
                 $request->setUri($url);
                 return true;
@@ -101,8 +86,18 @@ class Dir implements ModuleInterface {
 
         if ($type == \HTUtils::URI_FILETYPE_DIR) {
             return $this->fixup_dir($request);
-        } elseif ($type == \HTUtils::URI_FILETYPE_MISSING) {        // We skip alternate handling (like /server-status etc)
-            return $this->fixup_dflt($request);
+        } elseif ($type == \HTUtils::URI_FILETYPE_MISSING) {
+            // Do fallback
+            $path = $request->getFallbackResource();
+            $url = $this->_updateUrl($request->getUri(), $path);
+
+            $type = $utils->findUriFileType($request, $url);
+            if ($type == \HTUtils::URI_FILETYPE_MISSING) {
+                $this->_router->createRedirect(302, "Moved permanently", $url);
+                exit;
+            }
+        } else {
+            // We skip alternate handling (like /server-status etc)
         }
 
         // It's possibly an existing file. We don't need to do any translations to it
@@ -111,6 +106,21 @@ class Dir implements ModuleInterface {
 
     public function getName() {
         return "dir";
+    }
+
+
+    protected function _updateUrl($url, $path) {
+        $utils = new \HTUtils();
+        $url = parse_url($url);
+
+        // Is it an absolute url?
+        if ($path[0] == "/") {
+            $url['path'] = $path;   // Replace
+        } else {
+            $url['path'] .= $path;  // Append
+        }
+        $url = $utils->unparse_url($url);
+        return $url;
     }
 
 }
