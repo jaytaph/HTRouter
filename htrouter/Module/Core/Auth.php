@@ -26,6 +26,10 @@ class Auth implements ModuleInterface {
     }
 
     public function checkAuthorization(\HTRequest $request) {
+        // @TODO: Shouldn't we always provide a default?
+        $plugin = $request->getAuthType();
+        if (! $plugin) return true; // No authtype found, skip check
+
         // Iterator through all the registered providers
         $providers = $this->_router->getProviders(\HTRouter::PROVIDER_AUTHZ_GROUP);
         foreach ($providers as $provider) {
@@ -49,7 +53,10 @@ class Auth implements ModuleInterface {
 
     public function checkAuthentication(\HTRequest $request) {
         // This is our authentication scheme (even when no auth data is given)
+
+        // @TODO: Shouldn't we always provide a default?
         $plugin = $request->getAuthType();
+        if (! $plugin) return true; // No authtype found, skip check
 
         // Did we supply authentication?
         $auth = $request->getAuthentication();
