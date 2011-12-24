@@ -30,6 +30,10 @@ class HTRequest {
     }
 
 
+    function getHeaders() {
+        return apache_request_headers();
+    }
+
     function appendEnvironment($key, $val) {
         if (! isset($this->_vars['environment'])) {
             $this->_vars['environment'] = array();

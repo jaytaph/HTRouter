@@ -98,14 +98,14 @@ class SetEnvIf implements ModuleInterface {
                             $regex = "/".$entry->attribute."/";
                             if (preg_match($regex, $header)) {
                                 // Match!
-                                $val = $header;
+                                $val = $value;
                                 break;
                             }
                         } else {
                             // Match direct
                             if (strcmp($entry->attribute, $header) == 0) {
                                 // Match!
-                                $val = $header;
+                                $val = $value;
                                 break;
                             }
                         }
