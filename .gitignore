@@ -2,3 +2,4 @@
 .htpasswd
 phar/htrouter.phar
 .htaccess
+docs

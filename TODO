@@ -1,0 +1,4 @@
+[ ] Add module mod_rewrite
+[ ] Add default fallback module for auth
+[ ] Make sure _run does work properly instead of just running hooks
+[ ] Every hook should return constand (DENIED, OK, or HTTP_CODE etc). When HTTP_CODE, just do redirect,
