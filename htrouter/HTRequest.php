@@ -36,6 +36,11 @@ class HTRequest {
         }
         $this->_vars['environment'][$key] = $val;
     }
+    function removeEnvironment($key) {
+        if (isset($this->_vars['environment'])) {
+            unset($this->_vars['environment'][$key]);
+        }
+    }
 
 
     function getIp() {
