@@ -89,6 +89,7 @@ class Dir implements ModuleInterface {
         } elseif ($type == \HTUtils::URI_FILETYPE_MISSING) {
             // Do fallback
             $path = $request->getFallbackResource();
+            if ($path == false) return false;
             $url = $this->_updateUrl($request->getUri(), $path);
 
             $type = $utils->findUriFileType($request, $url);
