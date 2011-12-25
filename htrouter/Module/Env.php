@@ -63,8 +63,8 @@ class Env implements ModuleInterface {
     }
 
 
-    public function getName() {
-        return "env";
+    public function getAliases() {
+        return array("mod_env.c", "mod_env");
     }
 
 }

@@ -224,7 +224,9 @@ class HTRouter {
         $name = strtolower($name);
 
         foreach ($this->_modules as $module) {
-            if (strtolower($module->getName()) == $name) return $module;
+            foreach ($module->getAliases() as $alias) {
+                if (strtolower($alias) == $name) return $module;
+            }
         }
         return null;
     }

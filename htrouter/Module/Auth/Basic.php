@@ -50,8 +50,8 @@ class Basic extends \AuthModule {
         return "Basic";
     }
 
-    public function getName() {
-        return "auth_basic";
+    public function getAliases() {
+        return array("mod_auth_basic.c", "auth_basic");
     }
 
 }

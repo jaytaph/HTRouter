@@ -3,7 +3,7 @@
 namespace HTRouter;
 
 interface ModuleInterface {
-    public function getName();
+    public function getAliases();
 
     public function init(\HTRouter $router);
 }

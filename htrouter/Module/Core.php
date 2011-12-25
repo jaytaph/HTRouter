@@ -31,8 +31,8 @@ class Core implements ModuleInterface {
     }
 
 
-    public function getName() {
-        return "core";
+    public function getAliases() {
+        return array("core.c", "core");
     }
 
     // Core Directives (Apache 2.2.x)

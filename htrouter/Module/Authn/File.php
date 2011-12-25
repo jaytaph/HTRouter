@@ -56,8 +56,8 @@ class File Extends \AuthnModule {
         return \AuthModule::AUTH_DENIED;
     }
 
-    public function getName() {
-        return "authn_file";
+    public function getAliases() {
+        return array("mod_authn_file.c", "authn_file");
     }
 
 }

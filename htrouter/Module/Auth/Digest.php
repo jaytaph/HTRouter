@@ -17,8 +17,8 @@ class Digest extends \AuthModule {
         return "Digest";
     }
 
-    public function getName() {
-        return "auth_digest";
+    public function getAliases() {
+        return array("mod_auth_digest.c", "auth_digest");
     }
 
 }

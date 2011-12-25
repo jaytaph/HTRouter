@@ -225,8 +225,8 @@ class Host Extends \AuthzModule {
     }
 
 
-    public function getName() {
-        return "authz_host";
+    public function getAliases() {
+        return array("mod_authz_host.c", "authz_host");
     }
 
 }

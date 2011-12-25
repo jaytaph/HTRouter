@@ -95,7 +95,7 @@ class Auth implements ModuleInterface {
         $request->setAuthType($plugin);
     }
 
-    public function getName() {
-        return "auth";
+    public function getAliases() {
+        return array("core_auth.c", "core_auth");
     }
 }

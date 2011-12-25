@@ -153,8 +153,8 @@ class SetEnvIf implements ModuleInterface {
     }
 
 
-    public function getName() {
-        return "setenvif";
+    public function getAliases() {
+        return array("mod_setenvif.c", "mod_setenvif");
     }
 
 }

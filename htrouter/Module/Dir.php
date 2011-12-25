@@ -105,8 +105,8 @@ class Dir implements ModuleInterface {
         return false;
     }
 
-    public function getName() {
-        return "dir";
+    public function getAliases() {
+        return array("mod_dir.c", "mod_dir");
     }
 
 

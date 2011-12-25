@@ -69,8 +69,8 @@ class User Extends \AuthzModule {
         return \AuthModule::AUTHZ_NOT_FOUND;
     }
 
-    public function getName() {
-        return "authz_user";
+    public function getAliases() {
+        return array("mod_authz_user.c", "authz_user");
     }
 
 }

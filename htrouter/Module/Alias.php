@@ -109,8 +109,8 @@ class Alias implements ModuleInterface {
 
 
 
-    public function getName() {
-        return "alias";
+    public function getAliases() {
+        return array("mod_alias.c", "alias_module");
     }
 
 }
