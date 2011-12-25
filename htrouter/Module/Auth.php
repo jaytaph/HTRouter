@@ -1,6 +1,6 @@
 <?php
 
-namespace HTRouter\Module\Core;
+namespace HTRouter\Module;
 use HTRouter\Module;
 
 class Auth extends Module {
