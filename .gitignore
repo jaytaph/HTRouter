@@ -3,3 +3,4 @@
 phar/htrouter.phar
 .htaccess
 docs
+public/htaccess
