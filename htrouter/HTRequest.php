@@ -27,6 +27,15 @@ class HTRequest {
             if (! isset($this->_vars[$name])) $this->_vars[$name] = array();
             return $this->_vars[$name];
         }
+
+        if (substr($name, 0, 5) == "unset") {
+            $name = strtolower(substr($name, 5));
+            if (isset($this->_vars[$name])) {
+                unset($this->_vars[$name]);
+            }
+            return;
+        }
+
     }
 
 

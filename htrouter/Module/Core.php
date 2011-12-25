@@ -10,8 +10,11 @@ class Core implements ModuleInterface {
 
     public function init(\HTRouter $router)
     {
+        $this->_router = $router;
+
         $router->registerDirective($this, "require");
         $router->registerDirective($this, "satisfy");
+        $router->registerDirective($this, "<ifmodule");
 
         // Default values
         $router->getRequest()->setSatisfy("all");
@@ -28,6 +31,25 @@ class Core implements ModuleInterface {
         $utils = new \HTUtils();
         $value = $utils->fetchDirectiveFlags($line, array("all" => "all", "any" => "any"));
         $request->setSatisfy($value);
+    }
+
+    public function gt_ifmoduleDirective(\HTRequest $request, $line) {
+        $line = trim($line);
+        if ($line[strlen($line)-1] != '>') {
+            throw new \UnexpectedValueException("No > found");
+        }
+
+        $module = str_replace(">", "", $line);
+
+        // Check if module exists
+        if (! $this->_router->findModule($module)) {
+            // Module does not exist, so skip this configuration block
+            $this->_router->skipConfig($request->getHTAccessFileResource(), "</IfModule>");
+        } else {
+            // Module does exist, read this configuration block
+            $this->_router->parseConfig($request->getHTAccessFileResource(), "</IfModule>");
+        }
+
     }
 
 

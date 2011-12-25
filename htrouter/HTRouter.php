@@ -124,12 +124,17 @@ class HTRouter {
             return;
         }
 
-        // Read & parse HTACCESS
-        $htaccessFile = file($htaccessPath);
-        foreach ($htaccessFile as $line) {
-            print "LINE: <font color=blue>".htmlentities($line)."</font><br>";
-            $this->_parseLine($line);
-        }
+        // Read HTACCESS
+        $f = fopen($htaccessPath, "r");
+        $this->_request->setHTAccessFileResource($f);
+
+        // Parse config
+        $this->parseConfig($this->_request->getHTAccessFileResource());
+
+        // Remove from config and close file
+        $this->_request->unsetHTAccessFileResource();
+        fclose($f);
+
     }
 
     /**
@@ -199,8 +204,9 @@ class HTRouter {
      * @return bool
      */
     protected function _directiveExists($directive) {
+        $directive = strtolower($directive);
         foreach ($this->_directives as $v) {
-            if ($directive == $v[1]) return $v;
+            if ($directive == strtolower($v[1])) return $v;
         }
         return false;
     }
@@ -232,39 +238,89 @@ class HTRouter {
     }
 
 
+    // Skip a block from the configuration until we find 'terminateLine' (mostly a </tag>)
+    function SkipConfig($f, $terminateLine) {
+        if (! is_resource($f)) {
+            throw new \UnexpectedValueException("Must be a config resource");
+        }
+
+        while (! feof($f)) {
+            // Fetch next line
+            $line = fgets($f);
+
+            // trim line
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            // Check if it's a comment line
+            if ($line[0] == "#") continue;
+
+            // Found ending line?
+            if (! empty($terminateLine) && strtolower($line) == strtolower($terminateLine)) {
+                return;
+            }
+        }
+    }
+
+
     /**
      * Parse a line from the htaccess file
      *
      * @param $line
      * @return null
      */
-    function _parseLine($line) {
-        // trim line
-        $line = trim($line);
-        if (empty($line)) return;
-
-        // Check if it's a comment line
-        if ($line[0] == "#") return;
-
-        // @TODO: Must we strip comments at the end of the file
-
-        // First word is the directive
-        if (! preg_match("/^(\w+) (.+)/", $line, $match)) {
-            // Cannot find any directive
-            return null;
+    function parseConfig($f, $terminateLine = "") {
+        if (! is_resource($f)) {
+            throw new \UnexpectedValueException("Must be a config resource");
         }
 
-        // Find registered directive
-        $tmp = $this->_directiveExists($match[1]);
-        if (!$tmp) {
-            // Unknown directive found
-            return null;
-        }
+        while (! feof($f)) {
+            // Fetch next line
+            $line = fgets($f);
 
-        // Call the <keyword>Directive() function inside the corresponding module
-        $module = $tmp[0];      // Object
-        $method = $tmp[1]."Directive";   // Method
-        $module->$method($this->_request, $match[2]);
+            // trim line
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            // Check if it's a comment line
+            if ($line[0] == "#") continue;
+
+            // Found ending line?
+            if (! empty($terminateLine) && strtolower($line) == strtolower($terminateLine)) {
+                break;
+            }
+
+            if (! empty($terminateLine)) {
+                print "LINE: <font color=red>".htmlentities($terminateLine)." => ".htmlentities($line)."</font><br>";
+            } else {
+                print "LINE: <font color=green>".htmlentities($line)."</font><br>";
+            }
+
+            // @TODO: Must we strip comments at the end of the file
+
+            // First word is the directive
+            if (! preg_match("/^(.+)\s+(.+)/", $line, $match)) {
+                // Cannot find any directive
+                continue;
+            }
+
+            // Find registered directive
+            $tmp = $this->_directiveExists($match[1]);
+            if (!$tmp) {
+                // Unknown directive found
+                continue;
+            }
+
+            // Replace <IfModule to gt_IfModule
+            if ($tmp[1][0] == "<") {
+                $tmp[1] = "gt_" . substr($tmp[1], 1);
+            }
+
+            // Call the <keyword>Directive() function inside the corresponding module
+            $module = $tmp[0];               // Object
+            $method = $tmp[1]."Directive";   // Method
+            $module->$method($this->_request, $match[2]);
+        }
     }
 
 
@@ -291,6 +347,13 @@ class HTRouter {
         exit;
     }
 
+    /**
+     * Create a redirection with HTTP_CODE HTTP_STATUS and an optional location header
+     *
+     * @param $code
+     * @param $status
+     * @param string $url
+     */
     function createRedirect($code, $status, $url = "") {
         header("HTTP/1.1 $code $status");
         if ($url != "") header("Location: ".$url);  // No URL when "GONE"
