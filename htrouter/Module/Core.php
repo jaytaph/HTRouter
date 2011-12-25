@@ -4,13 +4,13 @@
  */
 
 namespace HTRouter\Module;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class Core implements ModuleInterface {
+class Core extends Module {
 
     public function init(\HTRouter $router)
     {
-        $this->_router = $router;
+        parent::init($router);
 
         $router->registerDirective($this, "require");
         $router->registerDirective($this, "satisfy");
@@ -23,17 +23,17 @@ class Core implements ModuleInterface {
         $router->getRequest()->setURI($_SERVER['REQUEST_URI']);
     }
 
-    public function requireDirective(\HTRequest $request, $line) {
+    public function requireDirective(\HTRouter\Request $request, $line) {
         $request->appendRequire($line);
     }
 
-    public function satisfyDirective(\HTRequest $request, $line) {
-        $utils = new \HTUtils();
+    public function satisfyDirective(\HTRouter\Request $request, $line) {
+        $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("all" => "all", "any" => "any"));
         $request->setSatisfy($value);
     }
 
-    public function gt_ifmoduleDirective(\HTRequest $request, $line) {
+    public function gt_ifmoduleDirective(\HTRouter\Request $request, $line) {
         $line = trim($line);
         if ($line[strlen($line)-1] != '>') {
             throw new \UnexpectedValueException("No > found");
@@ -42,12 +42,12 @@ class Core implements ModuleInterface {
         $module = str_replace(">", "", $line);
 
         // Check if module exists
-        if (! $this->_router->findModule($module)) {
+        if (! $this->getRouter()->findModule($module)) {
             // Module does not exist, so skip this configuration block
-            $this->_router->skipConfig($request->getHTAccessFileResource(), "</IfModule>");
+            $this->getRouter()->skipConfig($request->getHTAccessFileResource(), "</IfModule>");
         } else {
             // Module does exist, read this configuration block
-            $this->_router->parseConfig($request->getHTAccessFileResource(), "</IfModule>");
+            $this->getRouter()->parseConfig($request->getHTAccessFileResource(), "</IfModule>");
         }
 
     }

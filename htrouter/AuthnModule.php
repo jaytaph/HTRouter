@@ -3,17 +3,11 @@
  * Authentication module interface.
  */
 
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-abstract class AuthnModule implements ModuleInterface {
+abstract class AuthnModule extends Module {
 
-    public function init(\HTRouter $router)
-    {
-        $this->_router = $router;
+    abstract public function checkPassword(\HTRouter\Request $request, $user, $pass);
 
-        // No need to register anything
-    }
-
-    abstract public function checkPassword(\HTRequest $request, $user, $pass);
-    abstract public function checkRealm(\HTRequest $request, $user, $realm);
+    abstract public function checkRealm(\HTRouter\Request $request, $user, $realm);
 }

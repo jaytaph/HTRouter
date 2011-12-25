@@ -4,13 +4,13 @@
  */
 
 namespace HTRouter\Module;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class SetEnvIf implements ModuleInterface {
+class SetEnvIf extends Module {
 
     public function init(\HTRouter $router)
     {
-        $this->_router = $router;
+        parent::init($router);
 
         $router->registerDirective($this, "BrowserMatch");
         $router->registerDirective($this, "BrowserMatchNoCase");
@@ -22,7 +22,7 @@ class SetEnvIf implements ModuleInterface {
         $router->registerHook(\HTRouter::HOOK_POST_READ_REQUEST, array($this, "matchHeaders"));
     }
 
-    public function BrowserMatchDirective(\HTRequest $request, $line) {
+    public function BrowserMatchDirective(\HTRouter\Request $request, $line) {
         $this->SetEnvIfDirective($request, "User-Agent ".$line);
     }
 
@@ -32,24 +32,24 @@ class SetEnvIf implements ModuleInterface {
      *   BrowserMatchNoCase Robot is_a_robot
      *   SetEnvIfNoCase User-Agent Robot is_a_robot
      *
-     * @param \HTRequest $request
+     * @param \HTRouter\Request $request
      * @param $line
      */
-    public function BrowserMatchNoCaseDirective(\HTRequest $request, $line) {
+    public function BrowserMatchNoCaseDirective(\HTRouter\Request $request, $line) {
         $this->SetEnvIfNoCaseDirective($request, "User-Agent ".$line);
     }
 
-    public function SetEnvIfDirective(\HTRequest $request, $line) {
+    public function SetEnvIfDirective(\HTRouter\Request $request, $line) {
         $entry = $this->_parseLine($request, $line, false);
         $request->appendSetEnvIf($entry);
     }
 
-    public function SetEnvIfNoCaseDirective(\HTRequest $request, $line) {
+    public function SetEnvIfNoCaseDirective(\HTRouter\Request $request, $line) {
         $this->_parseLine($request, $line, true);
         $request->appendSetEnvIf($entry);
     }
 
-    protected function _parseLine(\HTRequest $request, $line, $nocase) {
+    protected function _parseLine(\HTRouter\Request $request, $line, $nocase) {
         $args = explode(" ", $line);
 
         $entry = new \StdClass();
@@ -66,7 +66,7 @@ class SetEnvIf implements ModuleInterface {
     }
 
 
-    function matchHeaders(\HTRequest $request) {
+    function matchHeaders(\HTRouter\Request $request) {
         foreach ($request->getSetEnvIf() as $entry) {
             $val = "";
             switch (strtolower($entry->attribute)) {
@@ -134,7 +134,7 @@ class SetEnvIf implements ModuleInterface {
         return (! preg_match("/^[A-Za-z0-9_]*$/", $regex));
     }
 
-    protected function _addMatch(\HTRequest $request, \stdClass $entry) {
+    protected function _addMatch(\HTRouter\Request $request, \stdClass $entry) {
         foreach ($entry->envs as $env) {
             if ($env[0] == "!") {
                 // Unset !ENV

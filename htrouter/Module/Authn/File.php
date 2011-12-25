@@ -8,7 +8,6 @@
  */
 
 namespace HTRouter\Module\Authn;
-use HTRouter\ModuleInterface;
 
 class File Extends \AuthnModule {
 
@@ -22,7 +21,7 @@ class File Extends \AuthnModule {
         $router->registerProvider(\HTRouter::PROVIDER_AUTHN_GROUP, $this);
     }
 
-    public function authUserFileDirective(\HTRequest $request, $line) {
+    public function authUserFileDirective(\HTRouter\Request $request, $line) {
         if (! is_readable($line)) {
             throw new \RuntimeException("Cannot read authfile: $line");
         }
@@ -31,12 +30,12 @@ class File Extends \AuthnModule {
     }
 
 
-    function checkRealm (\HTRequest $request, $user, $realm) {
+    function checkRealm (\HTRouter\Request $request, $user, $realm) {
         // @TODO: unused
     }
 
-    function checkPassword (\HTRequest $request, $user, $pass) {
-        $utils = new \HTUtils();
+    function checkPassword (\HTRouter\Request $request, $user, $pass) {
+        $utils = new \HTRouter\Utils;
 
         // Read htpasswd file line by line
         $htpasswdFile = $request->getAuthUserFile();

@@ -1,9 +1,12 @@
 <?php
+
+namespace HTRouter;
+
 /**
  * Additional classes used throughout the system. Most of them would probably have a APR_* equivalent
  */
 
-class HTUtils {
+class Utils {
 
     /**
      * Validate an encrypted/hashed password. Handles different hash-methods
@@ -192,7 +195,7 @@ class HTUtils {
         return "$scheme$user$pass$host$port$path$query$fragment";
     }
 
-    function findUriOnDisk(\HTRequest $request, $url) {
+    function findUriOnDisk(\HTRouter\Request $request, $url) {
         // tries to match the url onto a file on disk. If possible
         $url = parse_url($url);
 
@@ -217,7 +220,7 @@ class HTUtils {
      * @param $url
      * @return int
      */
-    function findUriFileType(\HTRequest $request, $url) {
+    function findUriFileType(\HTRouter\Request $request, $url) {
         $path = $this->findUriOnDisk($request, $url);
         if (! is_readable($path)) return self::URI_FILETYPE_MISSING;
         if (is_dir($path)) return self::URI_FILETYPE_DIR;

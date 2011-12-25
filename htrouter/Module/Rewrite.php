@@ -4,47 +4,48 @@
  */
 
 namespace HTRouter\Module;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class Rewrite implements ModuleInterface {
+class Rewrite extends Module {
 
     public function init(\HTRouter $router)
     {
-//        $router->registerDirective($this, "RewriteBase");
-//        $router->registerDirective($this, "RewriteCond");
+        parent::init($router);
+
         $router->registerDirective($this, "RewriteEngine");
-//        $router->registerDirective($this, "RewriteLock");
         $router->registerDirective($this, "RewriteLog");
         $router->registerDirective($this, "RewriteLogLevel");
-//        $router->registerDirective($this, "RewriteMap");
-//        $router->registerDirective($this, "RewriteOptions");
-//        $router->registerDirective($this, "RewriteRule");
     }
 
     // Everything with *Directive can be called
-    public function rewriteEngineDirective(\HTRequest $request, $line) {
-        $utils = new \HTUtils();
+    public function rewriteEngineDirective(\HTRouter\Request $request, $line) {
+        $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
         $request->setRewriteEngine($value);
     }
 
-    public function rewriteLogLevelDirective(\HTRequest $request, $line) {
+    public function rewriteLogLevelDirective(\HTRouter\Request $request, $line) {
         if (! is_numeric($line) or $line < 0 or $line > 9) {
             throw new \OutOfRangeException("RewriteLogLevel must be between 0 and 9");
         }
         $request->setRewriteLogLevel($line);
     }
 
-    public function rewriteLogDirective(\HTRequest $request, $line) {
+    public function rewriteLogDirective(\HTRouter\Request $request, $line) {
         $request->setRewriteLog($line);
     }
 
 
-    public function rewriteCondDirective(\HTRequest$request, $line) {
+    public function rewriteCondDirective(\HTRouter\Request$request, $line) {
     }
 
     public function getName() {
         return "rewrite";
+    }
+
+    public function getAliases()
+    {
+        return array("mod_rewrite.c", "module_rewrite", "rewriteModule");
     }
 
 }

@@ -48,7 +48,7 @@ class HTRouter {
      */
     function __construct() {
         // Initialize request
-        $this->_request = new \HTRequest();
+        $this->_request = new \HTRouter\Request();
     }
 
     /**
@@ -169,7 +169,7 @@ class HTRouter {
      * Register a directive, a keyword that can be read from htaccess file
      * @param $directive
      */
-    public function registerDirective(HTRouter\ModuleInterface $module, $directive) {
+    public function registerDirective(\HTRouter\Module $module, $directive) {
         $this->_directives[] = array($module, $directive);
     }
 
@@ -191,9 +191,9 @@ class HTRouter {
      * would be to register the authn_basic and authn_digest types.
      *
      * @param $provider
-     * @param HTRouter\ModuleInterface $module
+     * @param \HTRouter\Module $module
      */
-    public function registerProvider($provider, HTRouter\ModuleInterface $module) {
+    public function registerProvider($provider, \HTRouter\Module $module) {
         $this->_providers[$provider][] = $module;
     }
 

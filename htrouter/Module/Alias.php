@@ -4,13 +4,13 @@
  */
 
 namespace HTRouter\Module;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class Alias implements ModuleInterface {
+class Alias extends Module {
 
     public function init(\HTRouter $router)
     {
-        $this->_router = $router;
+        parent::init($router);
 
         $router->registerDirective($this, "Redirect");
         $router->registerDirective($this, "RedirectMatch");
@@ -21,7 +21,7 @@ class Alias implements ModuleInterface {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
     }
 
-    public function redirectDirective(\HTRequest $request, $line) {
+    public function redirectDirective(\HTRouter\Request $request, $line) {
         $redirect = new \StdClass();
 
         // We should check if "status" is given. If not, it defaults to 302
@@ -68,7 +68,7 @@ class Alias implements ModuleInterface {
         // Check the url (if available)
         if (isset($args[1])) {
             $redirect->url = $args[1];
-            $utils = new \HTUtils;
+            $utils = new \HTRouter\Utils;
             if (! $utils->isUrl($redirect->url)) {
                 throw new \UnexpectedValueException("URL needs to be an actual URL (http://...)");
             }
@@ -78,32 +78,32 @@ class Alias implements ModuleInterface {
         $request->appendRedirects($redirect);
     }
 
-    public function redirectMatchDirective(\HTRequest $request, $line) {
+    public function redirectMatchDirective(\HTRouter\Request $request, $line) {
     }
 
-    public function redirectPermanentDirective(\HTRequest $request, $line) {
+    public function redirectPermanentDirective(\HTRouter\Request $request, $line) {
         // It's the same as "redirect permanent ..."
         $this->redirectDirective($request, "permanent ".$line);
     }
 
-    public function redirectTempDirective(\HTRequest $request, $line) {
+    public function redirectTempDirective(\HTRouter\Request $request, $line) {
         // It's the same as "redirect temp ..."
         $this->redirectDirective($request, "temp ".$line);
     }
 
-    public function translateName(\HTRequest $request) {
+    public function translateName(\HTRouter\Request $request) {
         // check if name matches one of the redirects
         foreach ($request->getRedirects() as $redirect) {
             $pos = strpos($request->getURI(), $redirect->urlpath);
             if ($pos === 0) {
-                $this->_router->createRedirect($redirect->http_code, $redirect->http_status, $redirect->url);
+                $this->getRouter()->createRedirect($redirect->http_code, $redirect->http_status, $redirect->url);
                 exit;
                 //$request->setURI($redirect->url);
             }
         }
     }
 
-    public function fixups(\HTRequest $request) {
+    public function fixups(\HTRouter\Request $request) {
         // @TODO: We need to fix the fixups
     }
 

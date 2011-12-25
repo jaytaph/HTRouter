@@ -1,13 +1,14 @@
 <?php
 
 namespace HTRouter\Module\Core;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class Auth implements ModuleInterface {
-    protected $_router;
+class Auth extends Module {
 
     public function init(\HTRouter $router)
     {
+        parent::init($router);
+
         $router->registerDirective($this, "AuthName");
         $router->registerDirective($this, "AuthType");
 
@@ -21,17 +22,15 @@ class Auth implements ModuleInterface {
         } else {
             $router->getRequest()->setAuthentication(false);
         }
-
-        $this->_router = $router;
     }
 
-    public function checkAuthorization(\HTRequest $request) {
+    public function checkAuthorization(\HTRouter\Request $request) {
         // @TODO: Shouldn't we always provide a default?
         $plugin = $request->getAuthType();
         if (! $plugin) return true; // No authtype found, skip check
 
         // Iterator through all the registered providers
-        $providers = $this->_router->getProviders(\HTRouter::PROVIDER_AUTHZ_GROUP);
+        $providers = $this->getRouter()->getProviders(\HTRouter::PROVIDER_AUTHZ_GROUP);
         foreach ($providers as $provider) {
             $result = $provider->checkUserAccess($request);
 
@@ -44,14 +43,14 @@ class Auth implements ModuleInterface {
 
         if ($result != \AuthModule::AUTHZ_GRANTED) {
             // Let user authenticate
-            $this->_router->createAuthenticateResponse();
+            $this->getRouter()->createAuthenticateResponse();
             exit;
         }
 
         return true;
     }
 
-    public function checkAuthentication(\HTRequest $request) {
+    public function checkAuthentication(\HTRouter\Request $request) {
         // This is our authentication scheme (even when no auth data is given)
 
         // @TODO: Shouldn't we always provide a default?
@@ -70,24 +69,24 @@ class Auth implements ModuleInterface {
 
         if ($result != \AuthModule::AUTH_GRANTED) {
             // Let user authenticate
-            $this->_router->createAuthenticateResponse();
+            $this->getRouter()->createAuthenticateResponse();
             exit;
         }
 
         return true;
     }
 
-    public function authNameDirective(\HTRequest $request, $line) {
+    public function authNameDirective(\HTRouter\Request $request, $line) {
         $line = trim($line);
         $line = trim($line, "\"\'");
         $request->setAuthName($line);
     }
 
-    public function authTypeDirective(\HTRequest $request, $line) {
+    public function authTypeDirective(\HTRouter\Request $request, $line) {
         $name = "auth_".strtolower(trim($line));
 
         // @TODO: We should check that we have the correct AUTH_* module loaded
-        $plugin = $this->_router->findModule($name);
+        $plugin = $this->getRouter()->findModule($name);
         if (! $plugin) {
             throw new \UnexpectedValueException("Cannot find $name");
         }

@@ -6,11 +6,10 @@
  */
 
 namespace HTRouter\Module\Auth;
-use HTRouter\ModuleInterface;
 
 class Basic extends \AuthModule {
 
-    public function authenticateUser(\HTRequest $request) {
+    public function authenticateUser(\HTRouter\Request $request) {
 
         // Parse authentication request
         $auth = $request->getAuthentication();
@@ -28,7 +27,7 @@ class Basic extends \AuthModule {
         $result = \AuthModule::AUTH_NOT_FOUND;
 
         // Iterator through all the registered providers to
-        $providers = $this->_router->getProviders(\HTRouter::PROVIDER_AUTHN_GROUP);
+        $providers = $this->getRouter()->getProviders(\HTRouter::PROVIDER_AUTHN_GROUP);
         foreach ($providers as $provider) {
             $result = $provider->checkPassword($request, $user, $pass);
 

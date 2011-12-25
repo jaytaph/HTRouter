@@ -4,14 +4,14 @@
  */
 
 namespace HTRouter\Module;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class Dir implements ModuleInterface {
+class Dir extends Module {
     const DEFAULT_DIRECTORY_INDEX_FILE = "index.html";
 
     public function init(\HTRouter $router)
     {
-        $this->_router = $router;
+        parent::init($router);
 
         $router->registerDirective($this, "DirectoryIndex");
         $router->registerDirective($this, "DirectorySlash");
@@ -23,26 +23,26 @@ class Dir implements ModuleInterface {
         $router->getRequest()->setDirectorySlash(true);
     }
 
-    public function DirectoryIndexDirective(\HTRequest $request, $line) {
+    public function DirectoryIndexDirective(\HTRouter\Request $request, $line) {
         $localUrls = explode(" ", $line);
         foreach ($localUrls as $url) {
             $request->appendDirectoryIndex($url);
         }
     }
 
-    public function DirectorySlashDirective(\HTRequest $request, $line) {
-        $utils = new \HTUtils();
+    public function DirectorySlashDirective(\HTRouter\Request $request, $line) {
+        $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
         $request->setDirectorySlash($value);
     }
 
-    public function FallbackResourceDirective(\HTRequest $request, $line) {
+    public function FallbackResourceDirective(\HTRouter\Request $request, $line) {
         $request->setFallbackResource($line);
     }
 
 
-    public function fixup_dir(\HTRequest $request) {
-        $utils = new \HTUtils();
+    public function fixup_dir(\HTRouter\Request $request) {
+        $utils = new \HTRouter\Utils;
 
         $url = $request->getUri();
 
@@ -59,7 +59,7 @@ class Dir implements ModuleInterface {
             $url = $utils->unparse_url($url);
 
             // Redirect permanently new slashed url ( http://example.org/dir => http://example.org/dir/ )
-            $this->_router->createRedirect(302, "Moved permanently", $url);
+            $this->getRouter()->createRedirect(302, "Moved permanently", $url);
             exit;
         }
 
@@ -68,7 +68,7 @@ class Dir implements ModuleInterface {
         $names[] = self::DEFAULT_DIRECTORY_INDEX_FILE;        // @TODO: Seriously wrong. This needs to be placed in config?
         foreach ($names as $name) {
             $url = $this->_updateUrl($request->getUri(), $name);
-            if ($utils->findUriFileType($request, $url) != \HTUtils::URI_FILETYPE_MISSING) {
+            if ($utils->findUriFileType($request, $url) != \HTRouter\Utils::URI_FILETYPE_MISSING) {
                 $request->setUri($url);
                 return true;
             }
@@ -78,23 +78,23 @@ class Dir implements ModuleInterface {
         return false;
     }
 
-    public function dirFixups(\HTRequest $request) {
-        $utils = new \HTUtils();
+    public function dirFixups(\HTRouter\Request $request) {
+        $utils = new \HTRouter\Utils;
 
         $url = $request->getUri();
         $type = $utils->findUriFileType($request, $url);
 
-        if ($type == \HTUtils::URI_FILETYPE_DIR) {
+        if ($type == \HTRouter\Utils::URI_FILETYPE_DIR) {
             return $this->fixup_dir($request);
-        } elseif ($type == \HTUtils::URI_FILETYPE_MISSING) {
+        } elseif ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
             // Do fallback
             $path = $request->getFallbackResource();
             if ($path == false) return false;
             $url = $this->_updateUrl($request->getUri(), $path);
 
             $type = $utils->findUriFileType($request, $url);
-            if ($type == \HTUtils::URI_FILETYPE_MISSING) {
-                $this->_router->createRedirect(302, "Moved permanently", $url);
+            if ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
+                $this->getRouter()->createRedirect(302, "Moved permanently", $url);
                 exit;
             }
         } else {
@@ -111,7 +111,7 @@ class Dir implements ModuleInterface {
 
 
     protected function _updateUrl($url, $path) {
-        $utils = new \HTUtils();
+        $utils = new \HTRouter\Utils;
         $url = parse_url($url);
 
         // Is it an absolute url?

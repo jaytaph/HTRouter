@@ -5,11 +5,10 @@
  */
 
 namespace HTRouter\Module\Auth;
-use HTRouter\ModuleInterface;
 
 class Digest extends \AuthModule {
 
-    public function authenticateUser(\HTRequest $request) {
+    public function authenticateUser(\HTRouter\Request $request) {
         throw new \LogicException("Digest authentication is not yet available.");
     }
 

@@ -5,7 +5,6 @@
  */
 
 namespace HTRouter\Module\Authz;
-use HTRouter\ModuleInterface;
 
 class Host Extends \AuthzModule {
     // The different order constants
@@ -30,13 +29,13 @@ class Host Extends \AuthzModule {
     }
 
 
-    public function checkUserAccess(\HTRequest $request)
+    public function checkUserAccess(\HTRouter\Request $request)
     {
         // Not needed, we are hooking in check_access
     }
 
 
-    public function allowDirective(\HTRequest $request, $line) {
+    public function allowDirective(\HTRouter\Request $request, $line) {
         if (! preg_match("/^from (.+)$/i", $line, $match)) {
             throw new \UnexpectedValueException("allow must be followed by a 'from'");
         }
@@ -47,7 +46,7 @@ class Host Extends \AuthzModule {
         }
     }
 
-    public function denyDirective(\HTRequest $request, $line) {
+    public function denyDirective(\HTRouter\Request $request, $line) {
         if (! preg_match("/^from (.+)$/i", $line, $match)) {
             throw new \UnexpectedValueException("deny must be followed by a 'from'");
         }
@@ -59,11 +58,11 @@ class Host Extends \AuthzModule {
 
     }
 
-    public function orderDirective(\HTRequest $request, $line) {
+    public function orderDirective(\HTRouter\Request $request, $line) {
         // Funny.. Apache does a strcmp on "allow,deny", so you can't have "allow, deny" spaces in between.
         // So we shouldn't allow it either.
 
-        $utils = new \HTUtils();
+        $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("allow,deny" => self::ALLOW_THEN_DENY,
                                                           "deny,allow" => self::DENY_THEN_ALLOW,
                                                           "mutual-failure" => self::MUTUAL_FAILURE));
@@ -74,11 +73,11 @@ class Host Extends \AuthzModule {
     /**
      * These functions should return true|false or something to make sure we can continue with our stuff?
      *
-     * @param \HTRequest $request
+     * @param \HTRouter\Request $request
      * @return bool
      * @throws \LogicException
      */
-    public function checkAccess(\HTRequest $request) {
+    public function checkAccess(\HTRouter\Request $request) {
 
         // The way we parse things depends on the "order"
         switch ($request->getAccessOrder()) {
@@ -128,7 +127,7 @@ class Host Extends \AuthzModule {
             }
 
             // Not ok. Satisfy ALL or we didn't find a "require"
-            $this->_router->createForbiddenResponse();
+            $this->getRouter()->createForbiddenResponse();
             exit;
         }
 
@@ -138,27 +137,27 @@ class Host Extends \AuthzModule {
     }
 
     protected function _findAllowDeny(array $items) {
-        $utils = new \HTUtils();
+        $utils = new \HTRouter\Utils;
 
         // Iterate all "ALLOW" or "DENY" items. We just return if at least one of them matches
         foreach ($items as $entry) {
             switch ($entry->type) {
                 case "env" :
-                    $env = $this->_router->getRequest()->getEnvironment();
+                    $env = $this->getRouter()->getRequest()->getEnvironment();
                     if (isset($env[$entry->env])) return true;
                     break;
                 case "nenv" :
-                    $env = $this->_router->getRequest()->getEnvironment();
+                    $env = $this->getRouter()->getRequest()->getEnvironment();
                     if (! isset ($env[$entry->env])) return true;
                     break;
                 case "all" :
                     return true;
                     break;
                 case "ip" :
-                    if ($utils->checkMatchingIP($entry->ip, $this->_router->getRequest()->getIp())) return true;
+                    if ($utils->checkMatchingIP($entry->ip, $this->getRouter()->getRequest()->getIp())) return true;
                     break;
                 case "host" :
-                    if ($utils->checkMatchingHost($entry->host, $this->_router->getRequest()->getIp())) return true;
+                    if ($utils->checkMatchingHost($entry->host, $this->getRouter()->getRequest()->getIp())) return true;
                     break;
                 default:
                     throw new \LogicException("Unknown entry type: ".$entry->type);

@@ -5,9 +5,8 @@
  */
 
 namespace HTRouter\Module\Authz;
-use HTRouter\ModuleInterface;
 
-class User Extends \AuthzModule {
+class User extends \AuthzModule {
 
     public function init(\HTRouter $router)
     {
@@ -19,13 +18,13 @@ class User Extends \AuthzModule {
         $router->registerProvider(\HTRouter::PROVIDER_AUTHZ_GROUP, $this);
     }
 
-    public function AuthzUserAuthoritativeDirective(\HTRequest $request, $line) {
-        $utils = new \HTUtils();
+    public function AuthzUserAuthoritativeDirective(\HTRouter\Request $request, $line) {
+        $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => "on", "off" => "off"));
         $request->setAuthzUserAuthoritative($value);
     }
 
-    public function checkUserAccess(\HTRequest $request) {
+    public function checkUserAccess(\HTRouter\Request $request) {
         // Any will do, and we are already authenticted through the "allow/deny" rules. No Need to check this.
         // @TODO: This code must be moved to HTRouter::_run()
         if ($request->getSatisfy() == "any" && $request->getAuthorized()) {

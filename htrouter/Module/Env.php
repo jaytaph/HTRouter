@@ -4,13 +4,13 @@
  */
 
 namespace HTRouter\Module;
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-class Env implements ModuleInterface {
+class Env extends Module {
 
     public function init(\HTRouter $router)
     {
-        $this->_router = $router;
+        parent::init($router);
 
         $router->registerDirective($this, "PassEnv");
         $router->registerDirective($this, "SetEnv");
@@ -20,7 +20,7 @@ class Env implements ModuleInterface {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
     }
 
-    public function PassEnvDirective(\HTRequest $request, $line) {
+    public function PassEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
             $env = trim($env);
@@ -28,7 +28,7 @@ class Env implements ModuleInterface {
         }
     }
 
-    public function SetEnvDirective(\HTRequest $request, $line) {
+    public function SetEnvDirective(\HTRouter\Request $request, $line) {
         $line = trim($line);
         list($key, $val) = explode(" ", $line, 2);
         $key = trim($key);
@@ -36,14 +36,14 @@ class Env implements ModuleInterface {
         $request->appendSetEnv(array($key, $val));
     }
 
-    public function UnsetEnvDirective(\HTRequest $request, $line) {
+    public function UnsetEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
             $request->appendUnsetEnv($env);
         }
     }
 
-    public function envFixup(\HTRequest $request) {
+    public function envFixup(\HTRouter\Request $request) {
         // Passthrough
         foreach ($request->getPassEnv() as $env) {
             if (isset($_ENV[$env])) {

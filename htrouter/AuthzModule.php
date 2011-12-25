@@ -3,16 +3,9 @@
  * Authorization module interface.
  */
 
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-abstract class AuthzModule implements ModuleInterface {
+abstract class AuthzModule extends Module {
 
-    public function init(\HTRouter $router)
-    {
-        $this->_router = $router;
-
-        // No need to register anything
-    }
-
-    abstract public function checkUserAccess(\HTRequest $request);
+    abstract public function checkUserAccess(\HTRouter\Request $request);
 }

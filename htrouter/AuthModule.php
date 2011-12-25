@@ -1,8 +1,8 @@
 <?php
 
-use HTRouter\ModuleInterface;
+use HTRouter\Module;
 
-abstract class AuthModule implements ModuleInterface {
+abstract class AuthModule extends Module {
 
     const AUTH_GRANTED      = 1;
     const AUTH_DENIED       = 2;
@@ -12,14 +12,5 @@ abstract class AuthModule implements ModuleInterface {
     const AUTHZ_DENIED       = 2;
     const AUTHZ_NOT_FOUND    = 3;
 
-    public function init(\HTRouter $router)
-    {
-        $this->_router = $router;
-
-        // No need to register anything
-    }
-
-    abstract public function getAuthType();
-
-    abstract public function authenticateUser(\HTRequest $request);
+    abstract public function authenticateUser(\HTRouter\Request $request);
 }
