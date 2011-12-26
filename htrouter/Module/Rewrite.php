@@ -113,37 +113,127 @@ class Rewrite extends Module {
     }
 
     function fixUp(\HTRouter\Request $request) {
+        // [RewriteRules in directory context]
         if ($request->getRewriteEngine() == false) {
             return \HTRouter::STATUS_DECLINED;
         }
 
-        // [RewriteRules in directory context]
         // @TODO: We should strip the leading directory stuff
         // @TODO: Directory must not start with /:  so=> /my/dir/index.html => dir/index.html when using /my/dir/.htacces
 
+        // This is the URL we rewrite, it will change per rewriteUrl
+        $url_path = $request->getServerVar('SCRIPT_NAME');
+
+        $skip = 0;
+        $lastMatch = true;
+
+        // From here we can return from inside our rewriterules. Anything that needs to be set only once, must have
+        // been set prior to the "thenext" label"
+thenext:
+
+        // Iterate all the rewrite rules in order!
         foreach ($request->getRewriteRule() as $rule) {
-            if (! $rule->matches()) continue;
+            // Some flag must be parsed prior to checking stuff
+            $chained = $rule->hasFlag(Flag::TYPE_CHAIN);
+
+            // If the rule is chained to the last rule, and that one didn't match. Skip it
+            if ($chained && ! $lastMatch) {
+                continue;
+            }
+
+            // We need to skip $skip amount of rules
+            if ($skip > 0) {
+                $skip--;
+                continue;
+            }
+
+            // Skip to the next rule if this rule does not apply to sub requests
+            if ($rule->hasFlag(Flag::TYPE_NOSUBREQS) && $request->isSubRequest()) {
+                continue;
+            }
+
+            // All done pre-parsing some flags. Now onto the actual matching
+
+            // Check if the rule matches
+            $match = $rule->matches();
+            $lastMatch = $match;
+
+            if ($match) {
+                // Rewrite only when matched
+                $url_path = $rule->rewrite($url_path);
+
+                // Do the flags that must be done after a match
+                foreach ($rule->getFlags() as $flag) {
+                    switch ($flag->getType()) {
+                        case Flag::TYPE_CHAIN :
+                            $chained = true;
+                            break;
+                        case Flag::TYPE_ENV :
+                            // Set environment
+                            $this->getRouter()->getRequest()->appendEnvironment($flag->getKey(), $flag->getValue());
+                            break;
+                        case Flag::TYPE_FORBIDDEN :
+                            // Forbid it!
+                            $this->getRouter()->createForbiddenResponse();
+                            exit;
+                            break;
+                        case Flag::TYPE_GONE :
+                            // Just gone
+                            $this->getRouter()->createRedirect(410, "Gone");
+                            break;
+                        case Flag::TYPE_HANDLER :
+                            $request->setTempHandler($flag->getKey());
+                            break;
+                        case Flag::TYPE_LAST :
+                            // Do not evaluate any more flags or rules
+                            return \HTRouter::STATUS_DECLINED;
+                            break;
+                        case Flag::TYPE_NEXT :
+                            // Restart rules
+                            goto thenext;
+                            break;
+                        case Flag::TYPE_MIMETYPE :
+                            $request->setTempMimeType($flag->getKey());
+                            break;
+                        case Flag::TYPE_PROXY :
+                            throw new \Exception("PRoxy is not supported as rewriterule flag");
+                            break;
+                        case Flag::TYPE_PASSTHROUGH :
+                            // @TODO: Do passthrough
+                            break;
+                        case Flag::TYPE_REDIRECT :
+                            $code = $flag->getKey();
+                            if (empty($code)) $code = 302;
+                            $this->getRouter()->createRedirect($code, $utils->getStatusLine($code), $url_path);
+                            break;
+                        case Flag::TYPE_SKIP :
+                            // If the rule matched, skip
+                            $skip = $flag->getKey();
+                            break;
+                    }
+                }
+            } // if ($match)
+
+            // Do stuff that needs to be done wether or not we have matched!
+
+
         }
 
         return \HTRouter::STATUS_DECLINED;
     }
 
     function mimeType(\HTRouter\Request $request) {
-        // (T=) Type is OK, (H=) Handler is not!
+        // We set the mimetype last. This means that when we have N mimetype flags, only the last will be set.
+        // We do this very late so our request does not get messed up with mimetypes I guess.
 
-        foreach ($request->getRewriteRule() as $rule) {
-            if (! $rule->matches()) continue;
-
-            $flag = $rule->getFlag(Flag::TYPE_MIMETYPE);
-            if ($flag == null) {
-                return \HTRouter::STATUS_DECLINED;
-            }
-
-            // Set content-type!
+        $mimeType = $request->getTempMimeType();
+        if ($mimeType) {
             $request->setContentType($flag->getKey());
+        }
 
-            // @TODO: OK or declined?
-            return \HTRouter::STATUS_DECLINED;
+        $handler = $request->getTempHandler();
+        if ($handler) {
+            throw new \Exception("We cannot set handler");
         }
 
         return \HTRouter::STATUS_DECLINED;

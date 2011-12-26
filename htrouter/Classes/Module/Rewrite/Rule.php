@@ -230,8 +230,6 @@ class Rule {
             // Check if condition matches
             $match = $condition->matches();
 
-//            print "CONDITION ".$condition." matches: ".($match?"yes":"no")."<br>\n";
-
             // Check if we need to AND or OR
             if (! $match && ! $condition->hasFlag(Flag::TYPE_ORNEXT)) {
                 // Condition needs to be AND'ed, so it cannot match
@@ -250,5 +248,47 @@ class Rule {
 
         print "Conditions for rule <b>".$this."</b> match: ".($match?"yes":"no")."<br>";
         return $match;
+    }
+
+
+    function rewrite($url_path) {
+        $utils = new \HTRouter\Utils();
+
+        // Check if pattern matches
+        $regex = "/".$this->_pattern."/";
+        $match = preg_match($regex, $url_path);
+        if ($this->_patternNegate) {
+            $match = ! $match;
+        }
+
+        // We didn't match the pattern (or negative pattern). Return unmodified url_path
+        if (! $match) {
+            return $url_path;
+        }
+
+
+        if ($this->_substitutionType == self::TYPE_SUB_NONE) {
+            // This is a dash, so no need to rewrite
+            return $url_path;
+        }
+
+        if ($this->_substitutionType == self::TYPE_SUB) {
+            $src_url = parse_url($url_path);
+            $dst_url = parse_url($this->_substitution);
+            if (! isset($src_url['host'])) $src_url['host'] = "";
+            if (! isset($dst_url['host'])) $dst_url['host'] = "";
+
+            // If it's the same host or redirect flag is on, we do a redirect
+            if ($dst_url['host'] != $src_url['host'] || $this->hasFlag(Flag::TYPE_REDIRECT)) {
+                // @TODO: We must do a redirect here
+                $url = $utils->unparse_url($dst_url);
+                $this->getRequest()->getRouter()->createRedirect(302, "Moved permanently", $url);
+                exit;
+            }
+
+            // Change url_path
+            return $dst_url['path'];
+        }
+
     }
 }

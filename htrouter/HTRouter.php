@@ -55,7 +55,7 @@ class HTRouter {
      */
     function __construct() {
         // Initialize request
-        $this->_request = new \HTRouter\Request();
+        $this->_request = new \HTRouter\Request($this);
     }
 
     /**

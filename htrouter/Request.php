@@ -7,6 +7,13 @@ class Request {
 
     // @TODO: It's a kind of magic...
 
+    function __construct(\HTRouter $router) {
+        $this->_router = $router;
+    }
+
+    function getRouter() {
+        return $this->_router;
+    }
 
     // the get* functions allows a parameter. This is the return value when the actual item is not found.
 
