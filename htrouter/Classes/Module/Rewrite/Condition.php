@@ -63,11 +63,7 @@ class Condition {
 
     function __toString() {
         $ret = $this->_testString." ".($this->_condPatternNegate?"!":"").$this->_condPattern;
-        $flag_str = "";
-        foreach ($this->_flags as $flag) {
-            $flag_str .= (string)$flag;
-        }
-        if (! empty($flag_str)) $ret .= " [".$flag_str."]";
+        if (count($this->_flags)) $ret .= " [".join(", ", $this->_flags)."]";
         return $ret;
     }
 

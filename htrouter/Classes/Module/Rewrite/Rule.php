@@ -43,6 +43,12 @@ class Rule {
         return $this->_request;
     }
 
+    function __toString() {
+        $ret = $this->_pattern." ".$this->_substitution." ";
+        if (count($this->_flags)) $ret .= " [".join(", ", $this->_flags)."]";
+        return $ret;
+    }
+
     /**
      * Add a new condition to the list
      *
@@ -217,6 +223,7 @@ class Rule {
 
     protected function _checkMatch() {
         // Returns true if the rule match, false otherwise
+        $match = true;
 
         // First, check conditions
         foreach ($this->getCondititions() as $condition) {
@@ -229,16 +236,19 @@ class Rule {
             if (! $match && ! $condition->hasFlag(Flag::TYPE_ORNEXT)) {
                 // Condition needs to be AND'ed, so it cannot match
                 print "AND: Skipping rest of conditions!<br>";
-                return false;
+                $match = false;
+                break;
             }
 
             if ($match && $condition->hasFlag(Flag::TYPE_ORNEXT)) {
                 // condition needs to be OR'ed and we have already a match, no need to continue
                 print "OR: Skipping rest of conditions!<br>";
-                return true;
+                $match = true;
+                break;
             }
         }
 
-        return true;
+        print "Conditions for rule <b>".$this."</b> match: ".($match?"yes":"no")."<br>";
+        return $match;
     }
 }
