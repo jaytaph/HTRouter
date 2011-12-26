@@ -124,75 +124,75 @@ class Rule {
                     break;
                 case "chain" :
                 case "c" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_CHAIN, $key, $value);
                     break;
                 case "cookie" :
                 case "co" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_COOKIE, $key, $value);
                     break;
                 case "discardpath" :
                 case "dpi" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_DISCARDPATH, $key, $value);
                     break;
                 case "env" :
                 case "e" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_ENV, $key, $value);
                     break;
                 case "forbidden" :
                 case "f" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_FORBIDDEN, $key, $value);
                     break;
                 case "gone" :
                 case "g" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_GONE, $key, $value);
                     break;
                 case "handler" :
                 case "h" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_HANDLER, $key, $value);
                     break;
                 case "last" :
                 case "l" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_LAST, $key, $value);
                     break;
                 case "next" :
                 case "n" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_NEXT, $key, $value);
                     break;
                 case "nocase" :
                 case "nc" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_NOCASE, $key, $value);
                     break;
                 case "noescape" :
                 case "ne" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_NOESCAPE, $key, $value);
                     break;
                 case "nosubreqs" :
                 case "ns" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_NOSUBREQS, $key, $value);
                     break;
                 case "proxy" :
                 case "p" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_PROXY, $key, $value);
                     break;
                 case "passthrough" :
                 case "pt" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_PASSTHROUGH, $key, $value);
                     break;
                 case "qsappend" :
                 case "qsa" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_QSA, $key, $value);
                     break;
                 case "redirect" :
                 case "r" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_REDIRECT, $key, $value);
                     break;
                 case "skip" :
                 case "s" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_SKIP, $key, $value);
                     break;
                 case "type" :
                 case "t" :
-                    $this->_flags[] = new Flag(Flag::TYPE_BEFORE, $key, $value);
+                    $this->_flags[] = new Flag(Flag::TYPE_MIMETYPE, $key, $value);
                     break;
                 default :
                     throw new \UnexpectedValueException("Unknown flag found in rewriterule");
@@ -203,12 +203,16 @@ class Rule {
     }
 
     function hasFlag($type) {
+        return ($this->getFlag($type) != null);
+    }
+
+    function getFlag($type) {
         foreach ($this->_flags as $flag) {
             if ($flag->getType() == $type) {
-                return true;
+                return $flag;
             }
         }
-        return false;
+        return null;
     }
 
     protected function _checkMatch() {
@@ -219,7 +223,7 @@ class Rule {
             // Check if condition matches
             $match = $condition->matches();
 
-            print "CONDITION ".$condition." match: ".($match?"true":"false")."<br>\n";
+//            print "CONDITION ".$condition." matches: ".($match?"yes":"no")."<br>\n";
 
             // Check if we need to AND or OR
             if (! $match && ! $condition->hasFlag(Flag::TYPE_ORNEXT)) {

@@ -196,14 +196,17 @@ class Condition {
 
 
     function hasFlag($type) {
-        foreach ($this->_flags as $flag) {
-            if ($flag->getType() == $type) {
-                return true;
-            }
-        }
-        return false;
+        return ($this->getFlag($type) != null);
     }
 
+    function getFlag($type) {
+        foreach ($this->_flags as $flag) {
+            if ($flag->getType() == $type) {
+                return $flag;
+            }
+        }
+        return null;
+    }
 
     /**
      * Returns true if the condition matches, false otherwise. We don't mind non-deterministic conditions like TIME_*
@@ -227,12 +230,13 @@ class Condition {
         $match = false;
 
         // Expand the test string
-//        print "PRE : ".$this->_testString."<br>\n";
         $expanded = $this->_testStringType;
         switch ($this->_testStringType) {
             case self::TYPE_RULE_BACKREF :
+                throw new \Exception("Rule back references not yet supported!");
                 break;
             case self::TYPE_COND_BACKREF :
+                throw new \Exception("Condition back references not yet supported!");
                 break;
             case self::TYPE_SERVER :
                 $expanded = $this->_expandTestString($this->_testString);
@@ -244,11 +248,9 @@ class Condition {
             default :
                 throw new \DomainException("Unknown teststring type!");
         }
-//        print "POST : ".$expanded."<br>\n";
 
 
         // Check expanded string against conditional Pattern
-
         switch ($this->_condPatternType) {
             case self::COND_REGEX :
                 $regex = "/".$this->_condPattern."/";

@@ -134,15 +134,16 @@ class Rewrite extends Module {
         foreach ($request->getRewriteRule() as $rule) {
             if (! $rule->matches()) continue;
 
-            foreach ($rule->flags as $flag) {
-                if ($flag->getType() == Flag::TYPE_MIMETYPE) {
-                    // Set content-type!
-                    $request->setContentType($flag->getValue());
-
-                    // @TODO: OK or declined?
-                    return \HTRouter::STATUS_OK;
-                }
+            $flag = $rule->getFlag(Flag::TYPE_MIMETYPE);
+            if ($flag == null) {
+                return \HTRouter::STATUS_DECLINED;
             }
+
+            // Set content-type!
+            $request->setContentType($flag->getKey());
+
+            // @TODO: OK or declined?
+            return \HTRouter::STATUS_DECLINED;
         }
 
         return \HTRouter::STATUS_DECLINED;
