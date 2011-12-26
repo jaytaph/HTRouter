@@ -102,4 +102,9 @@ class Request {
 //        print "</pre>";
     }
 
+
+    function isHttps() {
+        return $this->getHttps();
+    }
+
 }

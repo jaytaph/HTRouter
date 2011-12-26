@@ -334,9 +334,8 @@ class Condition {
         $string = str_replace("%{REMOTE_HOST}", $request->getServerVar("REMOTE_HOST"), $string);
         $string = str_replace("%{REMOTE_PORT}", $request->getServerVar("REMOTE_PORT"), $string);
 
-        // @TODO: Strange.. Since this is run inside fixups, we haven't authenticated yet? Do we?
-        $string = str_replace("%{REMOTE_USER}", $request->getAuthenticatedUser(), $string);        // @TODO: Authenticated user
-        $string = str_replace("%{REMOTE_IDENT}", "", $string);                              // No identing!
+        $string = str_replace("%{REMOTE_USER}", $request->getAuthenticatedUser(), $string);
+        $string = str_replace("%{REMOTE_IDENT}", "", $string);                                         // We don't support identing!
         $string = str_replace("%{REQUEST_METHOD}", $request->getServerVar("REQUEST_METHOD"), $string);
         $string = str_replace("%{SCRIPT_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
         $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);

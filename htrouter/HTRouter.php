@@ -15,6 +15,8 @@ class HTRouter {
     // The HTTP request
     protected $_request;
 
+    const API_VERSION = "123.45";       // Useless API version
+
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
     const STATUS_DECLINED       = 1;
     const STATUS_OK             = 2;
@@ -69,12 +71,13 @@ class HTRouter {
      * Call this to route your stuff with .htaccess rules
      */
     public function route() {
+        $this->_initServer();
 
         // Initialize all modules
         $this->_initModules();
 
         // Read htaccess
-        $this->_init();
+        $this->_initHtaccess();
 
         // Parse htaccess
         $this->_run();
@@ -89,6 +92,16 @@ class HTRouter {
         foreach ($this->getRequest()->getEnvironment() as $key => $val) {
             print "K: $key   V: $val <br>\n";
         }
+    }
+
+    /**
+     * Initializes default server settings so we can emulate Apache
+     */
+    protected function _initServer() {
+        $this->getRequest()->setEnvironment(array());
+
+        $this->getRequest()->setApiVersion(self::API_VERSION);
+        $this->getRequest()->setHttps(false);
     }
 
     /**
@@ -129,7 +142,7 @@ class HTRouter {
      *
      * @return mixed
      */
-    protected function _init() {
+    protected function _initHtaccess() {
         $htaccessPath = $this->_request->getDocumentRoot() . "/" . self::HTACCESS_FILE;
 
         // Check existence of HTACCESS
@@ -171,7 +184,7 @@ class HTRouter {
 
                     // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
                     if (! is_numeric($retval)) {
-                        throw new \LogicException("REturn value must be a STATUS_* constant!");
+                        throw new \LogicException("Return value must be a STATUS_* constant: found in ".get_class($class)." ->$method!");
                     }
 
                     if ($retval == self::STATUS_OK) {

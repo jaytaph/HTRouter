@@ -124,7 +124,7 @@ class Host Extends \AuthzModule {
                 if (is_array($requires) and count($requires) > 0) {
                     // It's ok, we have at least 1 require statement, so we return true nevertheless
                     $request->setAuthorized(true);
-                    return true;
+                    return \HTRouter::STATUS_DECLINED;
                 }
             }
 
@@ -135,7 +135,7 @@ class Host Extends \AuthzModule {
 
         // Everything is ok
         $request->setAuthorized(true);
-        return true;
+        return \HTRouter::STATUS_DECLINED;
     }
 
     protected function _findAllowDeny(array $items) {
