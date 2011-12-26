@@ -18,6 +18,11 @@ class Env extends Module {
 
         // Register hook
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
+
+
+        $router->getRequest()->setPassEnv(array());
+        $router->getRequest()->setSetEnv(array());
+        $router->getRequest()->setUnsetEnv(array());
     }
 
     public function PassEnvDirective(\HTRouter\Request $request, $line) {
@@ -60,6 +65,9 @@ class Env extends Module {
         foreach ($request->getUnsetEnv() as $env) {
             $request->removeEnvironment($env);
         }
+
+        // All done. Proceed to next module
+        return \HTRouter::STATUS_DECLINED;
     }
 
 

@@ -20,6 +20,8 @@ class SetEnvIf extends Module {
         // Register hook
         $router->registerHook(\HTRouter::HOOK_HEADER_PARSER, array($this, "matchHeaders"));
         $router->registerHook(\HTRouter::HOOK_POST_READ_REQUEST, array($this, "matchHeaders"));
+
+        $router->getRequest()->setSetEnvIf(array());
     }
 
     public function BrowserMatchDirective(\HTRouter\Request $request, $line) {
@@ -121,8 +123,10 @@ class SetEnvIf extends Module {
             if (preg_match($regex, $val)) {
                 $this->_addMatch($request, $entry);
             }
-
         }
+
+        // All done. Proceed to next module
+        return \HTRouter::STATUS_DECLINED;
     }
 
     /**

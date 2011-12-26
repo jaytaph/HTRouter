@@ -18,7 +18,16 @@ function htrouter_autoloader($class) {
     // Namespace to directory conversion
     $class = str_replace("\\", "/", $class);
 
-    $class = dirname(__FILE__)."/".$class.".php";
+    $classes = array();
+    $classes[] = dirname(__FILE__)."/".$class.".php";
+    $classes[] = dirname(__FILE__)."/Classes/".$class.".php";
 
-    include_once($class);
+    foreach ($classes as $class) {
+        if (file_exists ($class)) {
+            include_once($class);
+            return;
+        }
+    }
+
+
 }

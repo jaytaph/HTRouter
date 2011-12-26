@@ -3,3 +3,5 @@
 [ ] Make sure _run does work properly instead of just running hooks
 [ ] Every hook should return constand (DENIED, OK, or HTTP_CODE etc). When HTTP_CODE, just do redirect,
 [ ] Also emulate a request_rec so things will function more smootly and concise with apache
+[ ] Trimming should be done by config parser, not the actual modules
+[ ] Need to order phases correctly: auth comes before fixup! http://httpd.apache.org/docs/2.2/mod/mod_rewrite.html#rewritecond

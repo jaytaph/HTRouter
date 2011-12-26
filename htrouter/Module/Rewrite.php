@@ -5,6 +5,10 @@
 
 namespace HTRouter\Module;
 use HTRouter\Module;
+use HTRouter\Module\Rewrite\Condition;
+use HTRouter\Module\Rewrite\Rule;
+use HTRouter\Module\Rewrite\Flag;
+
 
 class Rewrite extends Module {
 
@@ -50,12 +54,14 @@ class Rewrite extends Module {
      * @param $line
      */
     public function RewriteCondDirective(\HTRouter\Request $request, $line) {
-        list ($testString, $condPattern) = explode(" ", $line, 2);
+        $args = explode(" ", $line, 3);
+        if (count ($args) <= 2) {
+            // Add optional flags
+            $args[] = "";
+        }
 
-        $entry = new \StdClass();
-        $entry->testString = $testString;
-        $entry->condPattern = $condPattern;
-        $request->appendTempRewriteConditions($entry);
+        $condition = new Condition($args[0], $args[1], $args[2]);
+        $request->appendTempRewriteConditions($condition);
     }
 
     public function RewriteOptionsDirective(\HTRouter\Request $request, $line) {
@@ -67,17 +73,16 @@ class Rewrite extends Module {
 
     public function RewriteRuleDirective(\HTRouter\Request $request, $line) {
         $args = explode(" ", $line, 3);
-        if (count ($args) < 2) {
+        if (count ($args) <= 2) {
             // Add optional flags
             $args[] = "";
         }
 
-        $entry = new \StdClass();
-        $entry->pattern = array_shift($args);
-        $entry->substitution = array_shift($args);
-        $entry->flags = array_shift($args);
-        $entry->conditions = $request->getTempRewriteConditions();
-        $request->appendRewriteRule($entry);
+        $rule = new Rule($request, $args[0], $args[1], $args[2]);
+        foreach ($request->getTempRewriteConditions(array()) as $condition) {
+            $rule->addCondition($condition);
+        }
+        $request->appendRewriteRule($rule);
 
         // Clear the current rewrite conditions
         $request->unsetTempRewriteConditions();
@@ -88,36 +93,65 @@ class Rewrite extends Module {
      * Define the hooks
      */
     function handlerRedirect(\HTRouter\Request $request) {
-        // Internal redirect handler
+        // Internal redirect handler. Needed?
+        return \HTRouter::STATUS_DECLINED;
     }
 
     function preConfig(\HTRouter\Request $request) {
         // Not needed. Only used for RewriteMap
+        return \HTRouter::STATUS_DECLINED;
     }
 
     function postConfig(\HTRouter\Request $request) {
         // Not needed. Only used for RewriteMap and RewriteLogs
+        return \HTRouter::STATUS_DECLINED;
     }
 
     function childInit(\HTRouter\Request $request) {
         // Not needed. Only used for RewriteMap
+        return \HTRouter::STATUS_DECLINED;
     }
 
     function fixUp(\HTRouter\Request $request) {
+        if ($request->getRewriteEngine() == false) {
+            return \HTRouter::STATUS_DECLINED;
+        }
+
         // [RewriteRules in directory context]
         // @TODO: We should strip the leading directory stuff
         // @TODO: Directory must not start with /:  so=> /my/dir/index.html => dir/index.html when using /my/dir/.htacces
+
+        foreach ($request->getRewriteRule() as $rule) {
+            if (! $rule->matches()) continue;
+        }
+
+        return \HTRouter::STATUS_DECLINED;
     }
 
     function mimeType(\HTRouter\Request $request) {
         // (T=) Type is OK, (H=) Handler is not!
 
-        // Set content-type!
+        foreach ($request->getRewriteRule() as $rule) {
+            if (! $rule->matches()) continue;
+
+            foreach ($rule->flags as $flag) {
+                if ($flag->getType() == Flag::TYPE_MIMETYPE) {
+                    // Set content-type!
+                    $request->setContentType($flag->getValue());
+
+                    // @TODO: OK or declined?
+                    return \HTRouter::STATUS_OK;
+                }
+            }
+        }
+
+        return \HTRouter::STATUS_DECLINED;
     }
 
     function uriToFile(\HTRouter\Request $request) {
         // [RewriteRules in server context]
-        // @TODO: I don't think this one is neede, since we only do .htaccess context
+        // @TODO: I don't think this one is needed, since we only do .htaccess context
+        return \HTRouter::STATUS_DECLINED;
     }
 
 

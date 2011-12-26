@@ -1,7 +1,7 @@
 <?php
 
 class HTRouter {
-    const HTACCESS_FILE = ".htaccess";
+    const HTACCESS_FILE = "htaccess";
 
     // All registered directives
     protected $_directives = array();
@@ -15,6 +15,11 @@ class HTRouter {
     // The HTTP request
     protected $_request;
 
+    // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
+    const STATUS_DECLINED       = 1;
+    const STATUS_OK             = 2;
+    const STATUS_HTTP_OK        = 200;
+    const STATUS_HTTP_FORBIDDEN = 403;
 
     // Provider constants. Order / number is irrelevant.
     const PROVIDER_AUTHN_GROUP = 10;
@@ -76,6 +81,14 @@ class HTRouter {
 
         // Cleanup
         $this->_fini();
+
+        print "<hr>";
+        print "We are done. The file we need to include is : ".$this->getRequest()->getUri()."<br>\n";
+
+        print "<h3>Environment</h3>";
+        foreach ($this->getRequest()->getEnvironment() as $key => $val) {
+            print "K: $key   V: $val <br>\n";
+        }
     }
 
     /**
@@ -141,6 +154,8 @@ class HTRouter {
      * Run the actual hooked plugins. It should be just as simple as stated here..
      */
     protected function _run() {
+        $utils = new \HTRouter\Utils();
+
         // @TODO: This must be mapped onto the same logic more or less as found in request.c:ap_process_request_internal()
 
         // Run each hook in order
@@ -149,9 +164,29 @@ class HTRouter {
             foreach ($hook as $modules) {
                 // Every module has 0 or more callbacks
                 foreach ($modules as $callback) {
+                    // Run the callback
                     $class = $callback[0];
                     $method = $callback[1];
-                    $class->$method($this->_request);
+                    $retval = $class->$method($this->_request);
+
+                    // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
+                    if (! is_numeric($retval)) {
+                        throw new \LogicException("REturn value must be a STATUS_* constant!");
+                    }
+
+                    if ($retval == self::STATUS_OK) {
+                        // It's ok, no need to check more callbacks for this hook
+                        break;
+                    } elseif ($retval == self::STATUS_DECLINED) {
+                        // Nothing found, goto next callback
+                    } elseif ($retval >= self::STATUS_HTTP_OK) {
+                        // We can safely redirect if needed
+                        header("HTTP/1.1 ".$retval." ".$utils->getStatusLine($retval));
+                        foreach($this->getRequest()->getHeaders() as $header) {
+                            // Additional headers like Location etc..
+                            header("$header");
+                        }
+                    }
                 }
             }
         }
@@ -298,8 +333,10 @@ class HTRouter {
 
             // @TODO: Must we strip comments at the end of the file
 
+            // @TODO: TRY TO BE A BETTER PARSER
+
             // First word is the directive
-            if (! preg_match("/^(.+)\s+(.+)/", $line, $match)) {
+            if (! preg_match("/^(\S+)\s+(.+)/", $line, $match)) {
                 // Cannot find any directive
                 continue;
             }

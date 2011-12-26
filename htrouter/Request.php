@@ -7,6 +7,9 @@ class Request {
 
     // @TODO: It's a kind of magic...
 
+
+    // the get* functions allows a parameter. This is the return value when the actual item is not found.
+
     function __call($name, $arguments)
     {
         if (substr($name, 0, 6) == "append") {
@@ -28,7 +31,12 @@ class Request {
         if (substr($name, 0, 3) == "get") {
             // Get variable
             $name = strtolower(substr($name, 3));
-            if (! isset($this->_vars[$name])) $this->_vars[$name] = array();
+            if (! isset($this->_vars[$name])) {
+                if (! isset($arguments[0])) {
+                    $arguments[0] = false;
+                }
+                return $arguments[0];
+            }
             return $this->_vars[$name];
         }
 
@@ -81,6 +89,17 @@ class Request {
      */
     function getDocumentRoot() {
         return $_SERVER['DOCUMENT_ROOT'];
+    }
+
+
+    function getServerVar($item) {
+        if (isset ($_SERVER[$item])) {
+            return $_SERVER[$item];
+        }
+        return "";
+//        print "<pre>: Looking for $item :";
+//        print_r ($_SERVER);
+//        print "</pre>";
     }
 
 }

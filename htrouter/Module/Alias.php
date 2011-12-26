@@ -19,6 +19,9 @@ class Alias extends Module {
 
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "translateName"));
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
+
+
+        $router->getRequest()->setRedirects(array());
     }
 
     public function redirectDirective(\HTRouter\Request $request, $line) {
@@ -101,10 +104,13 @@ class Alias extends Module {
                 //$request->setURI($redirect->url);
             }
         }
+
+        return \HTRouter::STATUS_DECLINED;
     }
 
     public function fixups(\HTRouter\Request $request) {
         // @TODO: We need to fix the fixups
+        return \HTRouter::STATUS_DECLINED;
     }
 
 

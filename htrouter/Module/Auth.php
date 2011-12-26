@@ -27,7 +27,10 @@ class Auth extends Module {
     public function checkAuthorization(\HTRouter\Request $request) {
         // @TODO: Shouldn't we always provide a default?
         $plugin = $request->getAuthType();
-        if (! $plugin) return true; // No authtype found, skip check
+        if (! $plugin) {
+            // No authtype found, skip check
+            return \HTRouter::STATUS_DECLINED;
+        };
 
         // Iterator through all the registered providers
         $providers = $this->getRouter()->getProviders(\HTRouter::PROVIDER_AUTHZ_GROUP);
@@ -47,7 +50,7 @@ class Auth extends Module {
             exit;
         }
 
-        return true;
+        return \HTRouter::STATUS_DECLINED;
     }
 
     public function checkAuthentication(\HTRouter\Request $request) {
@@ -73,7 +76,7 @@ class Auth extends Module {
             exit;
         }
 
-        return true;
+        return \HTRouter::STATUS_DECLINED;
     }
 
     public function authNameDirective(\HTRouter\Request $request, $line) {

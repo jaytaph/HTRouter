@@ -50,7 +50,7 @@ class Dir extends Module {
         if (!empty($url) and ($url[strlen($url)-1] != '/')) {
             // We are fixing a directory and we aren't allowed to add a slash. No good.
             if ($request->getDirectorySlash() == false) {
-                return false;
+                return \HTRouter::STATUS_DECLINED;
             }
 
             // Add the extra slash to the URL
@@ -70,12 +70,14 @@ class Dir extends Module {
             $url = $this->_updateUrl($request->getUri(), $name);
             if ($utils->findUriFileType($request, $url) != \HTRouter\Utils::URI_FILETYPE_MISSING) {
                 $request->setUri($url);
-                return true;
+                return \HTRouter::STATUS_DECLINED;
             }
         }
 
         // Nothing found
-        return false;
+
+        // All done. Proceed to next module
+        return \HTRouter::STATUS_DECLINED;
     }
 
     public function dirFixups(\HTRouter\Request $request) {
@@ -102,7 +104,7 @@ class Dir extends Module {
         }
 
         // It's possibly an existing file. We don't need to do any translations to it
-        return false;
+        return \HTRouter::STATUS_DECLINED;
     }
 
     public function getAliases() {
