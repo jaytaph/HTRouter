@@ -26,6 +26,8 @@ class Host Extends \AuthzModule {
 
         // Default value
         $router->getRequest()->setAccessOrder(self::DENY_THEN_ALLOW);
+        $router->getRequest()->setAccessDeny(array());
+        $router->getRequest()->setAccessAllow(array());
     }
 
 
