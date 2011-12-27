@@ -218,6 +218,9 @@ class HTRouter {
      * @param $directive
      */
     public function registerDirective(\HTRouter\Module $module, $directive) {
+        if ($this->_directiveExists($directive)) {
+            throw new \RuntimeException("Cannot register the same directive twice!");
+        }
         $this->_directives[] = array($module, $directive);
     }
 
@@ -377,6 +380,8 @@ class HTRouter {
 
     /**
      * Returns a 401 response to the client, and exists
+     *
+     * @codeCoverageIgnore
      */
     function createAuthenticateResponse() {
         // We are not authorized. Return a 401
@@ -390,6 +395,8 @@ class HTRouter {
 
     /**
      * Returns a 401 response to the client, and exists
+     *
+     * @codeCoverageIgnore
      */
     function createForbiddenResponse() {
         // Return a 403
@@ -399,6 +406,8 @@ class HTRouter {
 
     /**
      * Create a redirection with HTTP_CODE HTTP_STATUS and an optional location header
+     *
+     * @codeCoverageIgnore
      *
      * @param $code
      * @param $status
