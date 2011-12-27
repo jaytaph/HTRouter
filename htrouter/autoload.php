@@ -6,7 +6,7 @@
 spl_autoload_register("htrouter_autoloader");
 
 // Generic apache functionality
-include "Apache.php";
+require_once "Apache.php";
 
 function htrouter_autoloader($class) {
 
@@ -25,9 +25,7 @@ function htrouter_autoloader($class) {
     foreach ($classes as $class) {
         if (file_exists ($class)) {
             include_once($class);
-            return;
         }
     }
-
 
 }

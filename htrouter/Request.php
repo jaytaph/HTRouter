@@ -100,18 +100,17 @@ class Request {
 
 
     function getServerVar($item) {
+        $item = strtoupper($item);
+
         if (isset ($_SERVER[$item])) {
             return $_SERVER[$item];
         }
         return "";
-//        print "<pre>: Looking for $item :";
-//        print_r ($_SERVER);
-//        print "</pre>";
     }
 
 
     function isHttps() {
-        return $this->getHttps();
+        return ($this->getHttps() === true);
     }
 
 }

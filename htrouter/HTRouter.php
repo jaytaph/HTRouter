@@ -169,7 +169,7 @@ class HTRouter {
     protected function _run() {
         $utils = new \HTRouter\Utils();
 
-        // @TODO: This must be mapped onto the same logic more or less as found in request.c:ap_process_request_internal()
+            // @TODO: This must be mapped onto the same logic more or less as found in request.c:ap_process_request_internal()
 
         // Run each hook in order
         foreach ($this->_hooks as $hook) {
