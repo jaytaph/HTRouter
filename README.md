@@ -20,8 +20,8 @@ Installation
 ------------
 The software is packaged as a PHAR file. This means the whole setup can be run by the following:
 
-> Download the PHAR file (htrouter.phar) or build by running phar/buildphar.php
-> $ php -S 0.0.0.0:80 -t /var/www path/to/htrouter.phar
+* Download the PHAR file (htrouter.phar) or build by running phar/buildphar.php
+* $ php -S 0.0.0.0:80 -t /var/www path/to/htrouter.phar
 
 
 Warning
