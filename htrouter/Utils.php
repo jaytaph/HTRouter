@@ -16,14 +16,14 @@ class Utils {
      * @throws LogicException
      */
     function validatePassword($passwd, $hash) {
-        if (substr($hash, 0, 6) == "\$apr1\$") {
+        if (substr($hash, 0, 6) == '$apr1$') {
             // Can't do APR's MD5
-            throw new LogicException("Cannot verify APR1 encoded passwords.");
+            throw new \LogicException("Cannot verify APR1 encoded passwords.");
         }
 
-        if (substr($hash, 0, 5) == "{SHA}") {
+        if (substr($hash, 0, 5) == '{SHA}') {
             // Can't do SHA
-            throw new LogicException("Cannot verify SHA1 encoded password.");
+            throw new \LogicException("Cannot verify SHA1 encoded password.");
         }
 
         // It's CRYPT
@@ -70,18 +70,25 @@ class Utils {
         // Is our netmask in a correct IP format?
         if (ip2long($netmask) === false) {
             throw new \UnexpectedValueException("'$netmask' does not look like a subnet mask");
-            return false;
         }
 
-        // Is our ip in a correct IP format?
-        if (ip2long($src) === false) {
+        // Are our ips in a correct IP format?
+        if (! $this->isValidIP($src)) {
             throw new \UnexpectedValueException("'$src' does not look like a decent IP");
         }
+        if (! $this->isValidIP($dst)) {
+            throw new \UnexpectedValueException("'$dst' does not look like a decent IP");
+        }
+
 
         // Check if netmask masks both the ip's. In that case, both addresses are inside the same submask.
         $nm = ip2long($netmask);
 
         return ((ip2long($src) & $nm) == (ip2long($dst) & $nm));
+    }
+
+    function isValidIP($ip) {
+        return (preg_match("/^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])){3}$/", $ip) >= 1);
     }
 
     /**
@@ -115,9 +122,17 @@ class Utils {
      * @throws UnexpectedValueException
      */
     protected function _checkMatchingIP_Cidr($src, $dst, $cidr) {
-        if ($cidr <= 0 and $cidr > 32) {
+        if (!is_numeric($cidr) and ($cidr <= 0 or $cidr > 32)) {
             throw new \UnexpectedValueException("'$cidr' does not look like a decent cidr");
         }
+        // Are our ips in a correct IP format?
+        if (! $this->isValidIP($src)) {
+            throw new \UnexpectedValueException("'$src' does not look like a decent IP");
+        }
+        if (! $this->isValidIP($dst)) {
+            throw new \UnexpectedValueException("'$dst' does not look like a decent IP");
+        }
+
 
         // Convert to binary format
         $bin_src = sprintf("%032b",ip2long($src));
@@ -136,7 +151,9 @@ class Utils {
 
         if (strcmp($dst, $reversed_dst_ip) !== 0) {
             // Reversed IP does not match!
+            // @codeCoverageIgnoreStart
             return false;
+            // @codeCoverageIgnoreEnd
         }
 
         // Check if complete string matches

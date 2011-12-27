@@ -44,7 +44,7 @@ class Rule {
     }
 
     function __toString() {
-        $ret = $this->_pattern." ".$this->_substitution." ";
+        $ret = $this->_pattern." ".$this->_substitution;
         if (count($this->_flags)) $ret .= " [".join(", ", $this->_flags)."]";
         return $ret;
     }
@@ -116,10 +116,10 @@ class Rule {
             $value = null;
 
             // Remove value if found (ie: cookie=TEST:VALUE)
-            if (strpos("=", $flag)) {
+            if (strpos($flag, '=') !== false) {
                 list($flag, $value) = explode("=", $flag, 2);
 
-                if (strpos(":", $value)) {
+                if (strpos($value, ':')) {
                     list($key, $value) = explode(":", $value, 2);
                 }
             }
@@ -213,12 +213,16 @@ class Rule {
     }
 
     function getFlag($type) {
-        foreach ($this->_flags as $flag) {
+        foreach ($this->getFlags() as $flag) {
             if ($flag->getType() == $type) {
                 return $flag;
             }
         }
         return null;
+    }
+
+    function getFlags() {
+        return $this->_flags;
     }
 
     protected function _checkMatch() {
@@ -233,20 +237,18 @@ class Rule {
             // Check if we need to AND or OR
             if (! $match && ! $condition->hasFlag(Flag::TYPE_ORNEXT)) {
                 // Condition needs to be AND'ed, so it cannot match
-                print "AND: Skipping rest of conditions!<br>";
                 $match = false;
                 break;
             }
 
             if ($match && $condition->hasFlag(Flag::TYPE_ORNEXT)) {
                 // condition needs to be OR'ed and we have already a match, no need to continue
-                print "OR: Skipping rest of conditions!<br>";
                 $match = true;
                 break;
             }
         }
 
-        print "Conditions for rule <b>".$this."</b> match: ".($match?"yes":"no")."<br>";
+//        print "Conditions for rule <b>".$this."</b> match: ".($match?"yes":"no")."<br>";
         return $match;
     }
 
@@ -256,7 +258,10 @@ class Rule {
 
         // Check if pattern matches
         $regex = "/".$this->_pattern."/";
-        $match = preg_match($regex, $url_path);
+        if ($this->hasFlag(Flag::TYPE_NOCASE)) {
+            $regex .= "i";
+        }
+        $match = (preg_match($regex, $url_path) >= 1);
         if ($this->_patternNegate) {
             $match = ! $match;
         }
@@ -281,14 +286,19 @@ class Rule {
             // If it's the same host or redirect flag is on, we do a redirect
             if ($dst_url['host'] != $src_url['host'] || $this->hasFlag(Flag::TYPE_REDIRECT)) {
                 // @TODO: We must do a redirect here
+                // @codeCoverageIgnoreStart
                 $url = $utils->unparse_url($dst_url);
                 $this->getRequest()->getRouter()->createRedirect(302, "Moved permanently", $url);
                 exit;
+                // @codeCoverageIgnoreEnd
             }
 
             // Change url_path
             return $dst_url['path'];
         }
 
+
+        // It should be a sub_none or sub type. Must be changed later
+        throw new \LogicException("We should not be here!");
     }
 }

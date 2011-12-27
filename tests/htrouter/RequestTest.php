@@ -142,5 +142,4 @@ class requestTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($a);
     }
 
-
 }

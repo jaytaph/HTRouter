@@ -37,8 +37,8 @@ class Flag {
 
     function __toString() {
         $ret = (string)$this->_type;
-        if ($this->_key) $ret .= "=".$this->key;
-        if ($this->_value) $ret .= ":".$this->value;
+        if ($this->_key) $ret .= "=".$this->getKey();
+        if ($this->_value) $ret .= ":".$this->getValue();
         return $ret;
     }
 

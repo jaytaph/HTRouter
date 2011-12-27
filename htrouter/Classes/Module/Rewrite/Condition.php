@@ -38,6 +38,9 @@ class Condition {
     protected $_condPatternType;
     protected $_condPatternNegate;
 
+    /**
+     * @var null|\HTRouter\Module\Rewrite\Rule
+     */
     protected $_rule = null;
 
     protected $_match;  // True when the condition has matched before already.
@@ -79,17 +82,17 @@ class Condition {
     }
 
     protected function _parseTestString($testString) {
-        if (preg_match("/^\$(\d)$/", $testString, $matches)) {
+        if (preg_match('/^\$([0-9])$/', $testString, $matches)) {
             // Conditional rule backref?
             $this->_testStringType = self::TYPE_RULE_BACKREF;
             $this->_testString = $matches[1];
 
-        } elseif (preg_match("/^\%(\d)$/", $testString, $matches)) {
+        } elseif (preg_match('/^\%([0-9])$/', $testString, $matches)) {
             // Conditional rule backref?
             $this->_testStringType = self::TYPE_COND_BACKREF;
             $this->_testString = $matches[1];
 
-        } elseif (preg_match("/^\%\{(.+)\}$/", $testString, $matches)) {
+        } elseif (preg_match('/^\%\{(.+)\}$/', $testString, $matches)) {
             $variable = strtoupper($matches[1]);        // Include %{}
 
             if (in_array($variable, $this->_specialTypes)) {
@@ -110,6 +113,10 @@ class Condition {
 
 
     protected function _parseCondPattern($condPattern) {
+        if (empty($condPattern)) {
+            throw new \UnexpectedValueException("CondPattern must not be empty!");
+        }
+
         // Check if its a negative condition
         if ($condPattern[0] == "!") {
             // CondPattern argument must be modified as well!
@@ -117,16 +124,21 @@ class Condition {
             $this->_condPatternNegate = true;
         }
 
-        if ($condPattern[0] == "<") {
+
+        // It's a regex unless we decide otherwise
+        $this->_condPatternType = self::COND_REGEX;
+
+
+        if ($condPattern[0] == "<" && strlen($condPattern) > 1) {
             $this->_condPattern = substr($condPattern, 1);
             $this->_condPatternType = self::COND_LEXICAL_PRE;
-        } elseif ($condPattern[0] == ">") {
+        } elseif ($condPattern[0] == ">" and strlen($condPattern) > 1) {
             $this->_condPattern = substr($condPattern, 1);
             $this->_condPatternType = self::COND_LEXICAL_POST;
-        } elseif ($condPattern[0] == "=") {
+        } elseif ($condPattern[0] == "=" and strlen($condPattern) > 1) {
             $this->_condPattern = substr($condPattern, 1);
             $this->_condPatternType = self::COND_LEXICAL_EQ;
-        } else {
+        } elseif ($condPattern[0] == "-" and strlen($condPattern) == 2) {
             switch ($condPattern) {
                 case "-d" :
                     $this->_condPatternType = self::COND_TEST_DIR;
@@ -150,11 +162,6 @@ class Condition {
                     $this->_condPatternType = self::COND_TEST_URL_SUBREQ;
                     break;
             }
-        }
-
-        // Check for OK condition
-        if ($this->_condPatternType == self::COND_UNKNOWN) {
-            throw new \UnexpectedValueException("Unknown condPattern in rewriteCond found");
         }
     }
 
@@ -186,6 +193,9 @@ class Condition {
                 case "nv" :
                     $this->_flags[] = new Flag(Flag::TYPE_NOVARY, null, null);
                     break;
+                default :
+                    throw new \UnexpectedValueException("Unknown condition flag: $flag");
+                    break;
             }
         }
     }
@@ -195,8 +205,18 @@ class Condition {
         return ($this->getFlag($type) != null);
     }
 
+    /**
+     * @return array \HTRouter\Module\Rewrite\Flag
+     */
+    function getFlags() {
+        return $this->_flags;
+    }
+
     function getFlag($type) {
-        foreach ($this->_flags as $flag) {
+        foreach ($this->getFlags() as $flag) {
+            /**
+             * @var $flag \HTRouter\Module\Rewrite\Flag
+             */
             if ($flag->getType() == $type) {
                 return $flag;
             }
@@ -227,22 +247,26 @@ class Condition {
 
         // Expand the test string
         $expanded = $this->_testStringType;
+
         switch ($this->_testStringType) {
             case self::TYPE_RULE_BACKREF :
-                throw new \Exception("Rule back references not yet supported!");
+                throw new \DomainException("Rule back references not yet supported!");
                 break;
             case self::TYPE_COND_BACKREF :
-                throw new \Exception("Condition back references not yet supported!");
+                throw new \DomainException("Condition back references not yet supported!");
                 break;
             case self::TYPE_SERVER :
+                // Special and server are actually the same.
                 $expanded = $this->_expandTestString($this->_testString);
                 break;
             case self::TYPE_SPECIAL :
-                    // Special and server are actually the same.
+                // Special and server are actually the same.
                 $expanded = $this->_expandTestString($this->_testString);
                 break;
+                // @codeCoverageIgnoreStart
             default :
                 throw new \DomainException("Unknown teststring type!");
+                // @codeCoverageIgnoreEnd
         }
 
 
@@ -256,18 +280,20 @@ class Condition {
                     $regex .= "i";
                 }
 
-                $match = preg_match($regex, $expanded, $matches);
+                $match = (preg_match($regex, $expanded, $matches) >= 1);
                 // @TODO: Do we need to store the matching?
                 break;
 
             case self::COND_LEXICAL_PRE :
                 // PRE and POST lexical match does not follow the nocase fields!
-                $match = (strcmp($this->_condPattern, $expanded) == -1);
+                $sub = substr($expanded, 0, strlen($this->_condPattern));
+                $match = (strcmp($sub, $this->_condPattern) == 0);
                 break;
 
             case self::COND_LEXICAL_POST :
                 // PRE and POST lexical match does not follow the nocase fields!
-                $match = (strcmp($this->_condPattern, $expanded) == 1);
+                $sub = substr($expanded, 0-strlen($this->_condPattern));
+                $match = (strcmp($sub, $this->_condPattern) == 0);
                 break;
 
             case self::COND_LEXICAL_EQ :
@@ -336,7 +362,11 @@ class Condition {
         $string = str_replace("%{SCRIPT_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
         $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);
         $string = str_replace("%{QUERY_STRING}", $request->getServerVar("QUERY_STRING"), $string);
-        $string = str_replace("%{AUTH_TYPE}", $request->getAuthType()->getAuthType(), $string);     // Returns either Basic or Digest
+        if ($request->getAuthType())
+            // @codeCoverageIgnoreStart
+            // @TODO: This needs to be added to the unittesting
+            $string = str_replace("%{AUTH_TYPE}", $request->getAuthType()->getAuthType(), $string);     // Returns either Basic or Digest
+            // @codeCoverageIgnoreEnd
 
         $string = str_replace("%{DOCUMENT_ROOT}", $request->getServerVar("DOCUMENT_ROOT"), $string);
         $string = str_replace("%{SERVER_ADMIN}", $request->getServerVar("SERVER_ADMIN"), $string);
