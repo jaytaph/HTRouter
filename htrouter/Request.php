@@ -2,60 +2,113 @@
 
 namespace HTRouter;
 
+// This is a sortakinda simulation of apache's request_req.
 class Request {
     protected $_vars = array();
 
-    // @TODO: It's a kind of magic...
+    protected $_errors = array();
 
-    function __construct(\HTRouter $router) {
+    protected $_parentRequest = null;
+
+    /**
+     * @var \HTRouter\VarContainer
+     */
+    public $vars;
+
+
+
+    /**
+     * Create new request, with a link to the router, and if needed, as a subrequest for another request.
+     *
+     * @param \HTRouter $router
+     * @param null $parentRequest The request for which this request is a subrequest for, or null when it's the main request.
+     */
+    function __construct(\HTRouter $router, $parentRequest = null) {
         $this->_router = $router;
+
+        // Set parent request, if this request is a subrequest
+        $this->_parentRequest = $parentRequest;
+
+        $this->vars = new \HTRouter\VarContainer();
     }
 
     function getRouter() {
         return $this->_router;
     }
 
-    // the get* functions allows a parameter. This is the return value when the actual item is not found.
-
-    function __call($name, $arguments)
-    {
-        if (substr($name, 0, 6) == "append") {
-            // This will append to a new or existing array.
-            $name = strtolower(substr($name, 6));
-            if (! isset($this->_vars[$name]) || ! is_array($this->_vars[$name])) {
-                $this->_vars[$name] = array();
-            }
-            $this->_vars[$name][] = $arguments[0];
-            return null;
-        }
-        if (substr($name, 0, 3) == "set") {
-            // Set variable
-            $name = strtolower(substr($name, 3));
-            $this->_vars[$name] = $arguments[0];
-            return null;
-        }
-
-        if (substr($name, 0, 3) == "get") {
-            // Get variable
-            $name = strtolower(substr($name, 3));
-            if (! isset($this->_vars[$name])) {
-                if (! isset($arguments[0])) {
-                    $arguments[0] = false;
-                }
-                return $arguments[0];
-            }
-            return $this->_vars[$name];
-        }
-
-        if (substr($name, 0, 5) == "unset") {
-            // Unset variable
-            $name = strtolower(substr($name, 5));
-            if (isset($this->_vars[$name])) {
-                unset($this->_vars[$name]);
-            }
-            return null;
-        }
+    /**
+     * Returns true when this request is the main request (first request, not a subrequest)
+     * @return bool
+     */
+    function isMainRequest() {
+        return ($this->_parentRequest == null);
     }
+
+    /**
+     * Returns true when this request is NOT the main request
+     *
+     * @return bool
+     */
+    function isSubRequest() {
+        return (! $this->isMainRequest());
+    }
+
+    /**
+     * Returns the main request, independent if this request is a subrequest or not.
+     * @return Request
+     */
+    function getMainRequest() {
+        $req = $this;
+
+        // Goto start of the chain (ie the first request)
+        while ($req->getParentRequest() != null) {
+            $req = $req->getParentRequest();
+        }
+
+        return $req;
+    }
+
+
+
+
+
+    function setApiVersion($version) {
+        $this->vars->setApiVersion($version);
+    }
+    function getAuthenticatedUser() {
+        return $this->vars->getAuthenticatedUser();
+    }
+    function getPathInfo() {
+        return $this->vars->getPathInfo();
+    }
+    function getAuthType() {
+        return $this->vars->getAuthType();
+    }
+    function getApiVersion() {
+        return $this->vars->getApiVersion();
+    }
+    function getTheRequest() {
+        return $this->vars->getTheRequest();
+    }
+    function getHttps() {
+        return $this->vars->getHttps();
+    }
+    function setHttps($arg) {
+        return $this->vars->setHttps($arg);
+    }
+
+
+    function getEnvironment() {
+        if (! isset ($this->_vars['environment'])) {
+            $this->_vars['environment'] = false;
+        }
+        return $this->_vars['environment'];
+    }
+
+
+
+
+
 
     /**
      * @return array
@@ -111,6 +164,14 @@ class Request {
 
     function isHttps() {
         return ($this->getHttps() === true);
+    }
+
+
+    function logError($error) {
+        $this->_errors[] = $error;
+    }
+    function getErrors() {
+        return $this->_errors;
     }
 
 }

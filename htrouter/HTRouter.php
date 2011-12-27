@@ -12,32 +12,33 @@ class HTRouter {
     // All registered providers
     protected $_providers = array();
 
-    // The HTTP request
+    // The main request
     protected $_request;
 
     const API_VERSION = "123.45";       // Useless API version
 
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
-    const STATUS_DECLINED       = 1;
-    const STATUS_OK             = 2;
-    const STATUS_HTTP_OK        = 200;
-    const STATUS_HTTP_FORBIDDEN = 403;
+    const STATUS_DECLINED                   =   1;
+    const STATUS_OK                         =   2;
+    const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
+    const STATUS_HTTP_FORBIDDEN             = 403;
+    const STATUS_HTTP_INTERNAL_SERVER_ERROR = 500;
 
-    // Provider constants. Order / number is irrelevant.
+    // Provider constants
     const PROVIDER_AUTHN_GROUP = 10;
     const PROVIDER_AUTHZ_GROUP = 15;
 
-    // Hook constants (they are in order of running and as defined by Apache)
-    const HOOK_PRE_CONFIG           =  5;
-    const HOOK_POST_CONFIG          = 10;
-    const HOOK_OPEN_LOGS            = 15;
-    const HOOK_CHILD_INIT           = 20;
-    const HOOK_HANDLER              = 25;
-    const HOOK_QUICK_HANDLER        = 30;
-    const HOOK_PRE_CONNECTION       = 35;
-    const HOOK_PROCESS_CONNECTION   = 40;
-    const HOOK_POST_READ_REQUEST    = 45;
-    const HOOK_LOG_TRANSACTION      = 50;
+    // Hook constants (not all of them are provided since we don't need them)
+//    const HOOK_PRE_CONFIG           =  5; 
+//    const HOOK_POST_CONFIG          = 10;
+//    const HOOK_OPEN_LOGS            = 15;
+//    const HOOK_CHILD_INIT           = 20;
+//    const HOOK_HANDLER              = 25;
+//    const HOOK_QUICK_HANDLER        = 30;
+//    const HOOK_PRE_CONNECTION       = 35;
+//    const HOOK_PROCESS_CONNECTION   = 40;
+//    const HOOK_POST_READ_REQUEST    = 45;
+//    const HOOK_LOG_TRANSACTION      = 50;
     const HOOK_TRANSLATE_NAME       = 55;
     const HOOK_MAP_TO_STORAGE       = 60;
     const HOOK_HEADER_PARSER        = 65;
@@ -47,21 +48,32 @@ class HTRouter {
     const HOOK_CHECK_ACCESS         = 85;
     const HOOK_CHECK_AUTHN          = 90;
     const HOOK_CHECK_AUTHZ          = 95;
-    const HOOK_INSERT_FILTER       = 100;
+//    const HOOK_INSERT_FILTER       = 100;
+
+
+    // Define the way we can execute the _runHook method. These are basically the mappings of
+    // AP_IMPLEMENT_HOOK_RUN_[FIRST|ALL|VOID].
+    const RUNHOOK_ALL   = 1;      // Run all hooks unless we get a status other than OK or DECLINED
+    const RUNHOOK_FIRST = 2;      // Run all hooks until we get a status that is not DECLINED
+    const RUNHOOK_VOID  = 3;      // Run all hooks. Don't care about the status code (there probably isn't any)
 
 
     /**
      * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
      */
-    function __construct() {
+    function __construct($request = null) {
         // Initialize request
-        $this->_request = new \HTRouter\Request($this);
+        if ($request == null) {
+            $this->_request = new \HTRouter\Request($this);
+        } else {
+            $this->_request = $request;
+        }
     }
 
     /**
      * Returns the current request of the router.
      *
-     * @return HTRequest
+     * @return HTRouter\Request
      */
     function getRequest() {
         return $this->_request;
@@ -98,8 +110,9 @@ class HTRouter {
      * Initializes default server settings so we can emulate Apache
      */
     protected function _initServer() {
-        $this->getRequest()->setEnvironment(array());
 
+        // Set default values for our request
+        $this->getRequest()->setEnvironment(array());
         $this->getRequest()->setApiVersion(self::API_VERSION);
         $this->getRequest()->setHttps(false);
     }
@@ -108,7 +121,6 @@ class HTRouter {
      * Initializes the modules so directives are known
      */
     protected function _initModules() {
-
         $path = dirname(__FILE__)."/Module/";
 
         // Read module directory and initialize all modules
@@ -143,7 +155,7 @@ class HTRouter {
      * @return mixed
      */
     protected function _initHtaccess() {
-        $htaccessPath = $this->_request->getDocumentRoot() . "/" . self::HTACCESS_FILE;
+        $htaccessPath = $this->getRequest()->getDocumentRoot() . "/" . self::HTACCESS_FILE;
 
         // Check existence of HTACCESS
         if (! file_exists ($htaccessPath)) {
@@ -152,27 +164,28 @@ class HTRouter {
 
         // Read HTACCESS
         $f = fopen($htaccessPath, "r");
-        $this->_request->setHTAccessFileResource($f);
+        $this->getRequest()->setHTAccessFileResource($f);
 
         // Parse config
-        $this->parseConfig($this->_request->getHTAccessFileResource());
+        $this->parseConfig($this->getRequest()->getHTAccessFileResource());
 
         // Remove from config and close file
-        $this->_request->unsetHTAccessFileResource();
+        $this->getRequest()->unsetHTAccessFileResource();
         fclose($f);
-
     }
 
-    /**
-     * Run the actual hooked plugins. It should be just as simple as stated here..
-     */
-    protected function _run() {
-        $utils = new \HTRouter\Utils();
 
-            // @TODO: This must be mapped onto the same logic more or less as found in request.c:ap_process_request_internal()
+    protected function _declDie($status, $str, \HTRouter\Request $r) {
+        if ($status == self::STATUS_DECLINED) {
+            $r->logError("configuration error: $str returns $status");
+            return self::STATUS_HTTP_INTERNAL_SERVER_ERROR;
+        } else {
+            return $status;
+        }
+    }
 
-        // Run each hook in order
-        foreach ($this->_hooks as $hook) {
+    protected function _runHook($hook, $runtype = self::RUNHOOK_ALL) {
+        foreach ($this->_hooks[$hook] as $hook) {
             // Every hook as 0 or more "modules" hooked
             foreach ($hook as $modules) {
                 // Every module has 0 or more callbacks
@@ -180,29 +193,100 @@ class HTRouter {
                     // Run the callback
                     $class = $callback[0];
                     $method = $callback[1];
-                    $retval = $class->$method($this->_request);
+                    $retval = $class->$method($this->getRequest());
 
                     // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
                     if (! is_numeric($retval)) {
                         throw new \LogicException("Return value must be a STATUS_* constant: found in ".get_class($class)." ->$method!");
                     }
 
-                    if ($retval == self::STATUS_OK) {
-                        // It's ok, no need to check more callbacks for this hook
-                        break;
-                    } elseif ($retval == self::STATUS_DECLINED) {
-                        // Nothing found, goto next callback
-                    } elseif ($retval >= self::STATUS_HTTP_OK) {
-                        // We can safely redirect if needed
-                        header("HTTP/1.1 ".$retval." ".$utils->getStatusLine($retval));
-                        foreach($this->getRequest()->getHeaders() as $header) {
-                            // Additional headers like Location etc..
-                            header("$header");
-                        }
+
+                    if ($runtype == self::RUNHOOK_VOID) {
+                        // Don't care about result. Just continue with the next
+                        continue;
                     }
+
+                    if ($runtype == self::RUNHOOK_ALL && ($retval != self::STATUS_OK || $retval != self::STATUS_DECLINED)) {
+                        // Only HTTP STATUS will return
+                        return $retval;
+                    }
+
+                    if ($runtype == self::RUNHOOK_FIRST && $retval != self::STATUS_DECLINED) {
+                        // OK and HTTP STATUS will return
+                        return $retval;
+                    }
+
                 }
             }
         }
+        return self::STATUS_OK;
+    }
+
+    /**
+     * Run the actual hooked plugins. It should be just as simple as stated here..
+     */
+    protected function _run() {
+        $utils = new \HTRouter\Utils();
+        $r = $this->getRequest();
+
+        // This should look somewhat similar to request.c:ap_process_request_internal()
+
+        // Skip proxy stuff. We don't do proxy
+
+
+        // Remove /. /.. and // from the URI
+        $realUri = $utils->getParents($r->getUri());
+        $r->setUri($realUri);
+
+
+        if ($r->isMainRequest() && $r->getFileName()) {
+            $status = $this->_locationWalk($r);
+            if ($status) {
+                return $status;
+            }
+
+            $status = $this->_runHook(self::HOOK_TRANSLATE_NAME, self::RUNHOOK_FIRST);
+            if ($status) {
+                return $this->_declDie($status, "translate", $r);
+            }
+        }
+
+
+        // Set per_dir_config to defaults
+
+
+        $status = $this->_runHook(self::HOOK_MAP_TO_STORAGE, self::RUNHOOK_FIRST);
+        if ($status) {
+            return $status;
+        }
+
+        // Rerun location walk (@TODO: Find out why)
+        if ($status) {
+            return $status;
+        }
+
+        if ($r->isMainRequest()) {
+            $status = $this->_runHook(self::HOOK_HEADER_PARSER, self::RUNHOOK_FIRST);
+            if ($status) {
+                return $status;
+            }
+        }
+
+        // We always reauthenticate, something request.c doesn't do for optimizing. Easy enough to create
+        $this->_authenticate($r);
+
+
+        $status = $this->_runHook(self::HOOK_CHECK_TYPE, self::RUNHOOK_FIRST);
+        if ($status != 0) {
+            return $this->_declDie($status, "find types", $r);
+        }
+
+        $status = $this->_runHook(self::HOOK_FIXUPS, self::RUNHOOK_ALL);
+        if ($status) {
+            return $status;
+        }
+
+        return OK;
     }
 
     /**
@@ -372,51 +456,51 @@ class HTRouter {
             // Call the <keyword>Directive() function inside the corresponding module
             $module = $tmp[0];               // Object
             $method = $tmp[1]."Directive";   // Method
-            $module->$method($this->_request, $match[2]);
+            $module->$method($this->getRequest(), $match[2]);
         }
     }
 
 
 
-    /**
-     * Returns a 401 response to the client, and exists
-     *
-     * @codeCoverageIgnore
-     */
-    function createAuthenticateResponse() {
-        // We are not authorized. Return a 401
-        $plugin = $this->_request->getAuthType();
-
-        // Return a 401
-        header('HTTP/1.1 401 Unauthorized');
-        header('WWW-Authenticate: '.$plugin->getAuthType().' realm="'.$this->_request->getAuthName().'"');
-        exit;
-    }
-
-    /**
-     * Returns a 401 response to the client, and exists
-     *
-     * @codeCoverageIgnore
-     */
-    function createForbiddenResponse() {
-        // Return a 403
-        header('HTTP/1.1 403 Forbidden');
-        exit;
-    }
-
-    /**
-     * Create a redirection with HTTP_CODE HTTP_STATUS and an optional location header
-     *
-     * @codeCoverageIgnore
-     *
-     * @param $code
-     * @param $status
-     * @param string $url
-     */
-    function createRedirect($code, $status, $url = "") {
-        header("HTTP/1.1 $code $status");
-        if ($url != "") header("Location: ".$url);  // No URL when "GONE"
-        exit;
-    }
+//    /**
+//     * Returns a 401 response to the client, and exists
+//     *
+//     * @codeCoverageIgnore
+//     */
+//    function createAuthenticateResponse() {
+//        // We are not authorized. Return a 401
+//        $plugin = $this->getRequest()->getAuthType();
+//
+//        // Return a 401
+//        header('HTTP/1.1 401 Unauthorized');
+//        header('WWW-Authenticate: '.$plugin->getAuthType().' realm="'.$this->getRequest()->getAuthName().'"');
+//        exit;
+//    }
+//
+//    /**
+//     * Returns a 401 response to the client, and exists
+//     *
+//     * @codeCoverageIgnore
+//     */
+//    function createForbiddenResponse() {
+//        // Return a 403
+//        header('HTTP/1.1 403 Forbidden');
+//        exit;
+//    }
+//
+//    /**
+//     * Create a redirection with HTTP_CODE HTTP_STATUS and an optional location header
+//     *
+//     * @codeCoverageIgnore
+//     *
+//     * @param $code
+//     * @param $status
+//     * @param string $url
+//     */
+//    function createRedirect($code, $status, $url = "") {
+//        header("HTTP/1.1 $code $status");
+//        if ($url != "") header("Location: ".$url);  // No URL when "GONE"
+//        exit;
+//    }
 
 }

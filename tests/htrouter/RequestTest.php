@@ -103,12 +103,12 @@ class requestTest extends PHPUnit_Framework_TestCase {
         $request = $this->_request;
 
         // Default is ""
-        $a = $request->getFoobar();
+        $a = $request->vars->getFoobar();
         $this->assertEmpty($a);
 
         // Append item
-        $request->appendFoobar("baz");
-        $a = $request->getFoobar();
+        $request->vars->appendFoobar("baz");
+        $a = $request->vars->getFoobar();
         $this->assertCount(1, $a);
         $this->assertEquals("baz", $a[0]);
     }
@@ -119,26 +119,26 @@ class requestTest extends PHPUnit_Framework_TestCase {
     function testDoesMagicUnsetFunction() {
         $request = $this->_request;
 
-        $request->setFoo("bar");
+        $request->vars->setFoo("bar");
 
-        $this->assertEquals("bar", $request->getFoo());
+        $this->assertEquals("bar", $request->vars->getFoo());
 
-        $request->unsetFoo();
-        $this->assertEmpty("", $request->getFoo());
+        $request->vars->unsetFoo();
+        $this->assertEmpty("", $request->vars->getFoo());
     }
 
     function testDoesMagicGetFunction() {
         $request = $this->_request;
 
-        $this->assertEmpty("", $request->getFoo());
-        $this->assertCount(0, $request->getFoo(array()));
-        $this->assertFalse($request->getFoo(false));
+        $this->assertEmpty("", $request->vars->getFoo());
+        $this->assertCount(0, $request->vars->getFoo(array()));
+        $this->assertFalse($request->vars->getFoo(false));
     }
 
     function testDoesMagicFunction() {
         $request = $this->_request;
 
-        $a = $request->foobar();
+        $a = $request->vars->foobar();
         $this->assertNull($a);
     }
 

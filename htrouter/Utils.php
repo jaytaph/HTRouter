@@ -198,6 +198,12 @@ class Utils {
         return $values[$line];
     }
 
+    /**
+     * The opposite function of parse_url
+     *
+     * @param $parsed_url
+     * @return string
+     */
     function unparse_url($parsed_url) {
         // As found on http://nl3.php.net/manual/en/function.parse-url.php#106731
         $scheme   = isset($parsed_url['scheme']) ? $parsed_url['scheme'] . '://' : '';
@@ -313,5 +319,44 @@ class Utils {
         }
         return $this->_statusLines[$status];
     }
+
+
+    /**
+     * Removes ./ ../ and // from an URI
+     *
+     * @param $uri
+     * @return string
+     */
+    function getParents($uri) {
+        $newDirs = array();
+        $dirs = explode("/", $uri);
+
+        $firstElement = true;
+        foreach ($dirs as $dir) {
+            // empty, but not the first item, so remove it
+            if (empty($dir) && ! $firstElement) goto no_emit;
+
+            // Single dot. Same dir, so remove it
+            if ($dir == ".") goto no_emit;
+
+            // Double dot in the first entry, so remove it
+            if ($dir == ".." && $firstElement) goto no_emit;
+
+            // Double dot and not the first, remove last entry from newdirs
+            if ($dir == "..") {
+                array_pop($newDirs);    // Remove last items, since we need to pop
+                continue;
+            }
+
+            // Add this entry to the new structure
+            $newDirs[] = $dir;
+no_emit:
+            $firstElement = false;
+        }
+
+        $path =  join("/", $newDirs);
+        return $path;
+    }
+
 
 }

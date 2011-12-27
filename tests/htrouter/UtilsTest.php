@@ -190,4 +190,31 @@ class utilsTest extends PHPUnit_Framework_TestCase {
             );
     }
 
+
+    function getParentProvider() {
+        return array(
+            array("/test", "/test"),
+            array("./test", "test"),
+            array("./dir1/dir2/./dir3", "dir1/dir2/dir3"),
+            array("./dir1/./././dir2/./dir3", "dir1/dir2/dir3"),
+            array("./dir1/../dir2/./dir3", "dir2/dir3"),
+            array("../dir1/dir2/./dir3", "dir1/dir2/dir3"),
+            array("../../../dir1/dir2/./dir3", "dir1/dir2/dir3"),
+            array("../../../dir1/./dir2/./dir3/../../../", ""),
+            array("../../../dir1/./dir2/././././dir3/../../../", ""),
+            array("../../../dir1/./dir2/././././dir3/../././../../", ""),
+            array("../dir1///dir2/.//dir3//", "dir1/dir2/dir3"),
+        );
+    }
+
+    /**
+     * @dataProvider getParentProvider
+     *
+     * @param $uri
+     * @param $realUri
+     */
+    function testDoesGetParentsFunction($uri, $realUri) {
+        $this->assertEquals($realUri, $this->_utils->getParents($uri));
+    }
+
 }
