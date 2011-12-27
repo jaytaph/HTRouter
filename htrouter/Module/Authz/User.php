@@ -21,13 +21,13 @@ class User extends \AuthzModule {
     public function AuthzUserAuthoritativeDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => "on", "off" => "off"));
-        $request->setAuthzUserAuthoritative($value);
+        $request->vars->setAuthzUserAuthoritative($value);
     }
 
     public function checkUserAccess(\HTRouter\Request $request) {
         // Any will do, and we are already authenticted through the "allow/deny" rules. No Need to check this.
         // @TODO: This code must be moved to HTRouter::_run()
-        if ($request->getSatisfy() == "any" && $request->getAuthorized()) {
+        if ($request->vars->getSatisfy() == "any" && $request->getAuthorized()) {
             return \AuthModule::AUTHZ_GRANTED;
         }
 
@@ -60,7 +60,7 @@ class User extends \AuthzModule {
         }
 
         // If the module is authorative we should deny access. This will stop other modules from trying to match..
-        if ($request->getAuthzUserAuthoritative() == "on") {
+        if ($request->vars->getAuthzUserAuthoritative() == "on") {
             return \AuthModule::AUTHZ_DENIED;
         }
 

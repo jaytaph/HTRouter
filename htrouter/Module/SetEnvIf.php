@@ -21,7 +21,7 @@ class SetEnvIf extends Module {
         $router->registerHook(\HTRouter::HOOK_HEADER_PARSER, array($this, "matchHeaders"));
         $router->registerHook(\HTRouter::HOOK_POST_READ_REQUEST, array($this, "matchHeaders"));
 
-        $router->getRequest()->setSetEnvIf(array());
+        $router->getRequest()->config->setSetEnvIf(array());
     }
 
     public function BrowserMatchDirective(\HTRouter\Request $request, $line) {
@@ -43,12 +43,12 @@ class SetEnvIf extends Module {
 
     public function SetEnvIfDirective(\HTRouter\Request $request, $line) {
         $entry = $this->_parseLine($request, $line, false);
-        $request->appendSetEnvIf($entry);
+        $request->config->appendSetEnvIf($entry);
     }
 
     public function SetEnvIfNoCaseDirective(\HTRouter\Request $request, $line) {
         $this->_parseLine($request, $line, true);
-        $request->appendSetEnvIf($entry);
+        $request->config->appendSetEnvIf($entry);
     }
 
     protected function _parseLine(\HTRouter\Request $request, $line, $nocase) {
@@ -69,7 +69,7 @@ class SetEnvIf extends Module {
 
 
     function matchHeaders(\HTRouter\Request $request) {
-        foreach ($request->getSetEnvIf() as $entry) {
+        foreach ($request->config->getSetEnvIf() as $entry) {
             $val = "";
             switch (strtolower($entry->attribute)) {
                 case "remote_host" :

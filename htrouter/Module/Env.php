@@ -19,16 +19,16 @@ class Env extends Module {
         // Register hook
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
 
-        $router->getRequest()->setPassEnv(array());
-        $router->getRequest()->setSetEnv(array());
-        $router->getRequest()->setUnsetEnv(array());
+        $router->getRequest()->config->setPassEnv(array());
+        $router->getRequest()->config->setSetEnv(array());
+        $router->getRequest()->config->setUnsetEnv(array());
     }
 
     public function PassEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
             $env = trim($env);
-            $request->appendPassEnv($env);
+            $request->config->appendPassEnv($env);
         }
     }
 
@@ -37,31 +37,31 @@ class Env extends Module {
         list($key, $val) = explode(" ", $line, 2);
         $key = trim($key);
         $val = trim($val);
-        $request->appendSetEnv(array($key, $val));
+        $request->config->appendSetEnv(array($key, $val));
     }
 
     public function UnsetEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
-            $request->appendUnsetEnv($env);
+            $request->config->appendUnsetEnv($env);
         }
     }
 
     public function envFixup(\HTRouter\Request $request) {
         // Passthrough
-        foreach ($request->getPassEnv() as $env) {
+        foreach ($request->config->getPassEnv() as $env) {
             if (isset($_ENV[$env])) {
                 $request->appendEnvironment($env, $_ENV[$env]);
             }
         }
 
         // Set Env
-        foreach ($request->getSetEnv() as $env) {
+        foreach ($request->config->getSetEnv() as $env) {
             $request->appendEnvironment($env[0], $env[1]);
         }
 
         // Unset Env
-        foreach ($request->getUnsetEnv() as $env) {
+        foreach ($request->config->getUnsetEnv() as $env) {
             $request->removeEnvironment($env);
         }
 

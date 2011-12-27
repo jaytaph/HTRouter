@@ -26,7 +26,7 @@ class File Extends \AuthnModule {
             throw new \RuntimeException("Cannot read authfile: $line");
         }
 
-        $request->setAuthUserFile($line);
+        $request->vars->setAuthUserFile($line);
     }
 
 
@@ -38,7 +38,7 @@ class File Extends \AuthnModule {
         $utils = new \HTRouter\Utils;
 
         // Read htpasswd file line by line
-        $htpasswdFile = $request->getAuthUserFile();
+        $htpasswdFile = $request->vars->getAuthUserFile();
         foreach (file($htpasswdFile) as $line) {
 
             // Trim line and parse user/pass

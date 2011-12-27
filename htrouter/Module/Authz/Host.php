@@ -25,9 +25,9 @@ class Host Extends \AuthzModule {
         $router->registerHook(\HTRouter::HOOK_CHECK_ACCESS, array($this, "checkAccess"));
 
         // Default value
-        $router->getRequest()->setAccessOrder(self::DENY_THEN_ALLOW);
-        $router->getRequest()->setAccessDeny(array());
-        $router->getRequest()->setAccessAllow(array());
+        $router->getRequest()->vars->setAccessOrder(self::DENY_THEN_ALLOW);
+        $router->getRequest()->vars->setAccessDeny(array());
+        $router->getRequest()->vars->setAccessAllow(array());
     }
 
 
@@ -44,7 +44,7 @@ class Host Extends \AuthzModule {
 
         // Convert each item on the line to our custom "entry" object
         foreach ($this->_convertToEntry($match[1]) as $item) {
-            $request->appendAccessAllow($item);
+            $request->vars->appendAccessAllow($item);
         }
     }
 
@@ -55,7 +55,7 @@ class Host Extends \AuthzModule {
 
         // Convert each item on the line to our custom "entry" object
         foreach ($this->_convertToEntry($match[1]) as $item) {
-            $request->appendAccessDeny($item);
+            $request->vars->appendAccessDeny($item);
         }
 
     }
@@ -68,7 +68,7 @@ class Host Extends \AuthzModule {
         $value = $utils->fetchDirectiveFlags($line, array("allow,deny" => self::ALLOW_THEN_DENY,
                                                           "deny,allow" => self::DENY_THEN_ALLOW,
                                                           "mutual-failure" => self::MUTUAL_FAILURE));
-        $request->setAccessOrder($value);
+        $request->vars->setAccessOrder($value);
     }
 
 
@@ -82,28 +82,28 @@ class Host Extends \AuthzModule {
     public function checkAccess(\HTRouter\Request $request) {
 
         // The way we parse things depends on the "order"
-        switch ($request->getAccessOrder()) {
+        switch ($request->vars->getAccessOrder()) {
             case self::ALLOW_THEN_DENY :
                 $result = false;
-                if ($this->_findAllowDeny($request->getAccessAllow())) {
+                if ($this->_findAllowDeny($request->vars->getAccessAllow())) {
                     $result = true;
                 }
-                if ($this->_findAllowDeny($request->getAccessDeny())) {
+                if ($this->_findAllowDeny($request->vars->getAccessDeny())) {
                     $result = false;
                 }
                 break;
             case self::DENY_THEN_ALLOW :
                 $result = true;
-                if ($this->_findAllowDeny($request->getAccessDeny())) {
+                if ($this->_findAllowDeny($request->vars->getAccessDeny())) {
                     $result = false;
                 }
-                if ($this->_findAllowDeny($request->getAccessAllow())) {
+                if ($this->_findAllowDeny($request->vars->getAccessAllow())) {
                     $result = true;
                 }
                 break;
             case self::MUTUAL_FAILURE :
-                if ($this->_findAllowDeny($request->getAccessAllow()) and
-                    !$this->_findAllowDeny($request->getAccessDeny())) {
+                if ($this->_findAllowDeny($request->vars->getAccessAllow()) and
+                    !$this->_findAllowDeny($request->vars->getAccessDeny())) {
                     $result = true;
                 } else {
                     $result = false;
@@ -116,14 +116,14 @@ class Host Extends \AuthzModule {
 
         // Not ok. Now we need to check if "satisfy any" already got a satisfaction
         if ($result == false) {
-            if ($request->getSatisfy() == "any") {
+            if ($request->vars->getSatisfy() == "any") {
                 // Check if there is at least one require line in the htaccess. If found, it means that
                 // we still have to possibility that we can be authorized
 
                 $requires = $request->getRequire();
                 if (is_array($requires) and count($requires) > 0) {
                     // It's ok, we have at least 1 require statement, so we return true nevertheless
-                    $request->setAuthorized(true);
+                    $request->vars->setAuthorized(true);
                     return \HTRouter::STATUS_DECLINED;
                 }
             }
@@ -134,7 +134,7 @@ class Host Extends \AuthzModule {
         }
 
         // Everything is ok
-        $request->setAuthorized(true);
+        $request->vars->setAuthorized(true);
         return \HTRouter::STATUS_DECLINED;
     }
 

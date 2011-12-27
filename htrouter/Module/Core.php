@@ -17,20 +17,20 @@ class Core extends Module {
         $router->registerDirective($this, "<ifmodule");
 
         // Default values
-        $router->getRequest()->setSatisfy("all");
+        $router->getRequest()->config->setSatisfy("all");
 
-        // Set the (default) request URI. This might be changed or rewritten
-        $router->getRequest()->setURI($_SERVER['REQUEST_URI']);
+//        // Set the (default) request URI. This might be changed or rewritten
+//        $router->getRequest()->setURI($_SERVER['REQUEST_URI']);
     }
 
     public function requireDirective(\HTRouter\Request $request, $line) {
-        $request->appendRequire($line);
+        $request->config->appendRequire($line);
     }
 
     public function satisfyDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("all" => "all", "any" => "any"));
-        $request->setSatisfy($value);
+        $request->config->setSatisfy($value);
     }
 
     public function gt_ifmoduleDirective(\HTRouter\Request $request, $line) {

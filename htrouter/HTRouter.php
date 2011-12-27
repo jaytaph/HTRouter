@@ -29,7 +29,7 @@ class HTRouter {
     const PROVIDER_AUTHZ_GROUP = 15;
 
     // Hook constants (not all of them are provided since we don't need them)
-//    const HOOK_PRE_CONFIG           =  5; 
+//    const HOOK_PRE_CONFIG           =  5;
 //    const HOOK_POST_CONFIG          = 10;
 //    const HOOK_OPEN_LOGS            = 15;
 //    const HOOK_CHILD_INIT           = 20;
@@ -112,7 +112,6 @@ class HTRouter {
     protected function _initServer() {
 
         // Set default values for our request
-        $this->getRequest()->setEnvironment(array());
         $this->getRequest()->setApiVersion(self::API_VERSION);
         $this->getRequest()->setHttps(false);
     }

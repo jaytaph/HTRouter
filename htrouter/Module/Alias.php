@@ -21,7 +21,7 @@ class Alias extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
 
 
-        $router->getRequest()->setRedirects(array());
+        $router->getRequest()->config->setRedirects(array());
     }
 
     public function redirectDirective(\HTRouter\Request $request, $line) {
@@ -78,7 +78,7 @@ class Alias extends Module {
         }
 
         // Add to the list
-        $request->appendRedirects($redirect);
+        $request->config->appendRedirects($redirect);
     }
 
     public function redirectMatchDirective(\HTRouter\Request $request, $line) {
