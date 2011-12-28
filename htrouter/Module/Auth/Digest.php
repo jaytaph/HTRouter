@@ -12,6 +12,7 @@ class Digest extends \HTRouter\AuthModule {
     {
         parent::init($router);
 
+        // Register hooks
         $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateDigestUser"));
     }
 

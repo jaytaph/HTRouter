@@ -13,13 +13,15 @@ class Dir extends Module {
     {
         parent::init($router);
 
+        // Register directives
         $router->registerDirective($this, "DirectoryIndex");
         $router->registerDirective($this, "DirectorySlash");
         $router->registerDirective($this, "FallbackResource");
 
-        // Register hook
+        // Register hooks
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "dirFixups"), 99);
 
+        // Set default values
         $router->getRequest()->config->setDirectorySlash(true);
     }
 

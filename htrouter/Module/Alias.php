@@ -12,15 +12,17 @@ class Alias extends Module {
     {
         parent::init($router);
 
+        // Register directives
         $router->registerDirective($this, "Redirect");
         $router->registerDirective($this, "RedirectMatch");
         $router->registerDirective($this, "RedirectPermanent");
         $router->registerDirective($this, "RedirectTemp");
 
+        // Register hooks
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "translateName"));
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
 
-
+        // Set default values
         $router->getRequest()->config->setRedirects(array());
     }
 

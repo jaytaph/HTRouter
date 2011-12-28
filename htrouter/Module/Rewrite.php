@@ -14,8 +14,9 @@ class Rewrite extends Module {
 
     public function init(\HTRouter $router)
     {
-        // Register directives
         parent::init($router);
+
+        // Register directives
         $router->registerDirective($this, "RewriteBase");
         $router->registerDirective($this, "RewriteCond");
         $router->registerDirective($this, "RewriteEngine");
@@ -27,7 +28,7 @@ class Rewrite extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "mimeType"), 99);
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "uriToFile"), 0);
 
-        // Default values
+        // Set default values
         $router->getRequest()->config->setRewriteEngine(false);
     }
 

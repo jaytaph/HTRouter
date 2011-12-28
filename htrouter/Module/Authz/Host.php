@@ -16,15 +16,15 @@ class Host Extends \HTRouter\AuthzModule {
     {
         parent::init($router);
 
-        // Register directive
+        // Register directives
         $router->registerDirective($this, "allow");
         $router->registerDirective($this, "deny");
         $router->registerDirective($this, "order");
 
-        // Register hook
+        // Register hooks
         $router->registerHook(\HTRouter::HOOK_CHECK_ACCESS, array($this, "checkAccess"));
 
-        // Default value
+        // Set default values
         $router->getRequest()->config->setAccessOrder(self::DENY_THEN_ALLOW);
         $router->getRequest()->config->setAccessDeny(array());
         $router->getRequest()->config->setAccessAllow(array());
@@ -118,9 +118,9 @@ class Host Extends \HTRouter\AuthzModule {
         // Not ok. Now we need to check if "satisfy any" already got a satisfaction
         if ($result == \HTRouter::STATUS_HTTP_FORBIDDEN &&
            ($request->config->getSatisfy() == "any" || count($request->config->getRequires(array()) == 0))) {
-                // Check if there is at least one require line in the htaccess. If found, it means that
-                // we still have to possibility that we can be authorized
-                $request->logError("Access denied for ".$request->getFilename()." / ".$request->getUri());
+            // Check if there is at least one require line in the htaccess. If found, it means that
+            // we still have to possibility that we can be authorized
+            $request->logError(\HTRouter\Request::ERRORLEVEL_NOTICE, "Access denied for ".$request->getFilename()." / ".$request->getUri());
         }
 
         // Return what we need to return

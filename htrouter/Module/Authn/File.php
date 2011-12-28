@@ -15,6 +15,7 @@ class File Extends \HTRouter\AuthnModule {
     {
         parent::init($router);
 
+        // Register directives
         $router->registerDirective($this, "AuthUserFile");
 
         // This is a authorization module, so register it as a provider

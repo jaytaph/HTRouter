@@ -12,14 +12,14 @@ class Core extends Module {
     {
         parent::init($router);
 
-        // Core directives
+        // Register core directives
         $router->registerDirective($this, "require");
         $router->registerDirective($this, "satisfy");
         $router->registerDirective($this, "<ifmodule");
         $router->registerDirective($this, "AuthName");
         $router->registerDirective($this, "AuthType");
 
-        // Default values
+        // Set default values
         $router->getRequest()->config->setSatisfy("all");
     }
 

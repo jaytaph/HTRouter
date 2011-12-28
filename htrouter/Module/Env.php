@@ -12,13 +12,15 @@ class Env extends Module {
     {
         parent::init($router);
 
+        // Register directives
         $router->registerDirective($this, "PassEnv");
         $router->registerDirective($this, "SetEnv");
         $router->registerDirective($this, "UnsetEnv");
 
-        // Register hook
+        // Register hooks
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
 
+        // Set default values
         $router->getRequest()->config->setPassEnv(array());
         $router->getRequest()->config->setSetEnv(array());
         $router->getRequest()->config->setUnsetEnv(array());

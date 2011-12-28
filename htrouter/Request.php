@@ -7,6 +7,21 @@ namespace HTRouter;
  */
 class Request {
 
+    const ERRORLEVEL_NONE    = 0;   // No logging
+    const ERRORLEVEL_DEBUG   = 1;   // Debug info
+    const ERRORLEVEL_NOTICE  = 2;   // Notices
+    const ERRORLEVEL_WARNING = 3;   // Warnings, but not severe
+    const ERRORLEVEL_ERROR   = 4;   // Errors, halting
+
+    protected $_errorMappings = array("debug" => self::ERRORLEVEL_DEBUG,
+                                      "notice" => self::ERRORLEVEL_NOTICE,
+                                      "warning" => self::ERRORLEVEL_WARNING,
+                                      "error" => self::ERRORLEVEL_ERROR);
+
+    protected $_logLevel = null;
+    protected $_logFile = null;
+    protected $_logSyslog = false;
+
     /**
      * @var array All errors that resulted in this request
      */
@@ -31,23 +46,12 @@ class Request {
      * @param null $parentRequest The request for which this request is a subrequest for, or null when it's the main request.
      */
     function __construct(\HTRouter $router, $parentRequest = null) {
-        //$this->_router = $router;
-
         // Set parent request, if this request is a subrequest
         $this->_parentRequest = $parentRequest;
 
         $this->config = new \HTRouter\VarContainer();
     }
 
-//    // @TODO: If we need this, we are in trouble. Everything should be taken from the request, not from the router!
-//    /**
-//     * Returns the main router (application) attached to this request
-//     *
-//     * @return \HTRouter
-//     */
-//    function getRouter() {
-//        return $this->_router;
-//    }
 
     /**
      * Returns true when this request is the main request (first request, not a subrequest)
@@ -97,9 +101,87 @@ class Request {
      *
      * @param $error
      */
-    function logError($error) {
+    function logError($level, $error) {
+        // Always store the error
+        $this->_errors[] = $level.": ".$error;
+
+        // @TODO: Remove me
         print "&bull;<b>Error:</b><font color=#4169e1>. $error</font><br>";
-        $this->_errors[] = $error;
+
+
+        // Initialize logging if not done so already..
+        if ($this->_logLevel == null) {
+            $config = $this->getMainConfig();
+
+            // Default error level
+            $this->_logLevel == self::ERRORLEVEL_NONE;
+
+            // Fetch correct loglevel
+            if (isset ($config['logging']['loglevel'])) {
+                $tmp = strtolower($config['logging']['loglevel']);
+                if (isset ($this->_errorMappings[$tmp])) {
+                    $this->_logLevel = $this->_errorMappings[$tmp];
+                }
+            }
+
+            // Check logfile
+            if (isset ($config['logging']['logfile'])) {
+                $tmp = $config['logging']['logfile'];
+                if ($tmp == "-") {
+                    // Log to syslog
+                    //openlog("htrouter", LOG_PID | LOG_PERROR, LOG_USER);
+                    $this->_logSyslog = true;
+                } else {
+                    // Otherwise, open file
+                    $this->_logFile = fopen($tmp, "a");
+                }
+            }
+        }
+
+        // No need to lpg this
+        if ($level < $this->_logLevel) return;
+
+        // Log to syslog
+        if ($this->_logSyslog || ! $this->_logFile) {
+            switch ($level) {
+                default :
+                case self::ERRORLEVEL_NOTICE :
+                    $sysLevel = LOG_NOTICE;
+                    break;
+                case self::ERRORLEVEL_DEBUG :
+                    $sysLevel = LOG_DEBUG;
+                    break;
+                case self::ERRORLEVEL_WARNING :
+                    $sysLevel = LOG_WARNING;
+                    break;
+                case self::ERRORLEVEL_ERROR :
+                    $sysLevel = LOG_ERR;
+                    break;
+            }
+            $r = syslog($sysLevel, $error);
+            var_dump($r);
+            return;
+        }
+
+
+        // Do file logging
+        switch ($level) {
+            case self::ERRORLEVEL_DEBUG :
+                $levelStr = "Debug";
+                break;
+            default:
+            case self::ERRORLEVEL_NOTICE :
+                $levelStr = "Notice";
+                break;
+            case self::ERRORLEVEL_WARNING :
+                $levelStr = "Warning";
+                break;
+            case self::ERRORLEVEL_ERROR :
+                $levelStr = "Error";
+                break;
+        }
+        $timestamp = date("Y/m/d H:i:s");
+        fwrite($this->_logFile, "[".$timestamp."] ".$levelStr." ".$error."\n");
     }
 
     /**
@@ -139,6 +221,7 @@ class Request {
 
     // additional items
     protected $_documentRoot;
+    protected $_mainConfig;
 
 
     public function setArgs($args)
@@ -359,6 +442,16 @@ class Request {
     public function getDocumentRoot()
     {
         return $this->_documentRoot;
+    }
+
+    public function setMainConfig($mainConfig)
+    {
+        $this->_mainConfig = $mainConfig;
+    }
+
+    public function getMainConfig()
+    {
+        return $this->_mainConfig;
     }
 
 }

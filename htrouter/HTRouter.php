@@ -2,6 +2,7 @@
 
 class HTRouter {
     const HTACCESS_FILE = "htaccess";
+    const CONFIG_FILE = "../public/htrouter.ini";
 
     // All registered directives
     protected $_directives = array();
@@ -14,6 +15,9 @@ class HTRouter {
 
     // The main request
     protected $_request;
+
+    // Array with main configuration items
+    protected $_mainConfig;
 
     const API_VERSION = "123.45";       // Useless API version
 
@@ -31,16 +35,7 @@ class HTRouter {
     const PROVIDER_AUTHZ_GROUP = 15;
 
     // Hook constants (not all of them are provided since we don't need them)
-//    const HOOK_PRE_CONFIG           =  5;
-//    const HOOK_POST_CONFIG          = 10;
-//    const HOOK_OPEN_LOGS            = 15;
-//    const HOOK_CHILD_INIT           = 20;
-//    const HOOK_HANDLER              = 25;
-//    const HOOK_QUICK_HANDLER        = 30;
-//    const HOOK_PRE_CONNECTION       = 35;
-//    const HOOK_PROCESS_CONNECTION   = 40;
     const HOOK_POST_READ_REQUEST    = 45;
-//    const HOOK_LOG_TRANSACTION      = 50;
     const HOOK_TRANSLATE_NAME       = 55;
     const HOOK_MAP_TO_STORAGE       = 60;
     const HOOK_HEADER_PARSER        = 65;
@@ -49,9 +44,6 @@ class HTRouter {
     const HOOK_CHECK_TYPE           = 80;
     const HOOK_CHECK_ACCESS         = 85;
     const HOOK_CHECK_AUTH           = 90;
-//    const HOOK_CHECK_AUTHZ          = 95;
-//    const HOOK_CHECK_AUTHN          = 90;
-//    const HOOK_INSERT_FILTER       = 100;
 
 
     // Define the way we can execute the _runHook method. These are basically the mappings of
@@ -65,6 +57,9 @@ class HTRouter {
      * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
      */
     function __construct($request = null, $populate = true) {
+        // Read configuration
+        $this->_readConfig(__DIR__.'/'.self::CONFIG_FILE);
+
         // Initialize request
         if ($request == null) {
             $this->_request = new \HTRouter\Request($this);
@@ -76,15 +71,6 @@ class HTRouter {
         if ($populate) {
             $this->_populateInitialRequest($this->getRequest());
         }
-    }
-
-    /**
-     * Returns the current request of the router.
-     *
-     * @return HTRouter\Request
-     */
-    function getRequest() {
-        return $this->_request;
     }
 
     /**
@@ -106,7 +92,7 @@ class HTRouter {
 
         // Output data
         if (isset($_GET['debug'])) {
-            // There is something seriously wrong with me....
+            // @TODO: remove this. There is something seriously wrong with me....
             print "<hr>";
             print "We are done. Status <b>".$this->getRequest()->getStatus()."</b> The file we need to include is : ".$this->getRequest()->getFilename()."<br>\n";
 
@@ -122,6 +108,15 @@ class HTRouter {
             header("$k: $v");
         }
         exit;
+    }
+
+    /**
+     * Returns the current request of the router.
+     *
+     * @return HTRouter\Request
+     */
+    function getRequest() {
+        return $this->_request;
     }
 
     /**
@@ -184,7 +179,7 @@ class HTRouter {
 
     protected function _declDie($status, $str, \HTRouter\Request $request) {
         if ($status == self::STATUS_DECLINED) {
-            $request->logError("configuration error: $str returns $status");
+            $request->logError(\HTRouter\Request::ERRORLEVEL_ERROR, "configuration error: $str returns $status");
             return self::STATUS_HTTP_INTERNAL_SERVER_ERROR;
         } else {
             return $status;
@@ -452,7 +447,7 @@ class HTRouter {
 
 
     // Skip a block from the configuration until we find 'terminateLine' (mostly a </tag>)
-    function SkipConfig($f, $terminateLine) {
+    function skipConfig($f, $terminateLine) {
         if (! is_resource($f)) {
             throw new \UnexpectedValueException("Must be a config resource");
         }
@@ -547,8 +542,10 @@ class HTRouter {
          * the base of writing your own webserver like nanoweb)
          */
 
+        // Set configuration
+        $request->setMainconfig($this->_getMainConfig());
+
         // By default, we don't have any authentication
-        // @TODO: What about authentication? Where do we set this?
         $request->setAuthType(null);
         $request->setUser("");
 
@@ -609,6 +606,9 @@ class HTRouter {
 
         // Let SetEnvIf etc do their thing
         $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);
+
+
+        $request->logError(\HTRouter\Request::ERRORLEVEL_DEBUG, "Populating new request done");
     }
 
 
@@ -618,11 +618,33 @@ class HTRouter {
      * @param HTRouter\Request $request
      */
     function copyRequest(\HTRouter\Request $request) {
-        $new = \HTRouter\Request($request->getRouter());
+        $new = new \HTRouter\Request($this, $request);
 
         // Let SetEnvIf etc do their thing, again
         $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);
 
         return $new;
+    }
+
+
+    /**
+     * Read INI configuration
+     *
+     * @param $configPath
+     * @return mixed
+     */
+    protected function _readConfig($configPath) {
+        if (! is_readable($configPath)) return;
+
+        $this->_mainConfig = parse_ini_file($configPath, true);
+    }
+
+    /**
+     * returns main htrouter configuration
+     *
+     * @return array
+     */
+    protected function _getMainConfig() {
+        return $this->_mainConfig;
     }
 }

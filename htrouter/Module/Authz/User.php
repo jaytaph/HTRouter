@@ -12,6 +12,7 @@ class User extends \HTRouter\AuthzModule {
     {
         parent::init($router);
 
+        // Register directives
         $router->registerDirective($this, "AuthzUserAuthoritative");
 
         // This is a authorization module, so register it as a provider

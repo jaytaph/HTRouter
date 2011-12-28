@@ -13,6 +13,7 @@ class Basic extends \HTRouter\AuthModule {
     {
         parent::init($router);
 
+        // Register hooks
         $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateBasicUser"));
     }
 
@@ -23,7 +24,7 @@ class Basic extends \HTRouter\AuthModule {
 
         // Check realm
         if (! $request->config->getAuthName()) {
-            $request->logError("need authname: ".$request->getUri());
+            $request->logError(\HTRouter\Request::ERRORLEVEL_ERROR, "need authname: ".$request->getUri());
             return \HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR;
         }
 
