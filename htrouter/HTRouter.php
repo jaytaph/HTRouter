@@ -74,14 +74,12 @@ class HTRouter {
     }
 
     /**
-     * Call this to route your stuff with .htaccess rules
+     * This is the main entrypoint that routes everything. The module hooks will take care of finding
+     * and parsing .htaccess files correctly (i hope).
      */
     public function route() {
         // Initialize all modules
         $this->_initModules();
-
-//        // Read htaccess
-//        $this->_initHtaccess();
 
         // Do actual running
         $status = $this->_run();
@@ -94,7 +92,19 @@ class HTRouter {
         if (isset($_GET['debug'])) {
             // @TODO: remove this. There is something seriously wrong with me....
             print "<hr>";
-            print "We are done. Status <b>".$this->getRequest()->getStatus()."</b> The file we need to include is : ".$this->getRequest()->getFilename()."<br>\n";
+            print "We are done. Status <b>".$this->getRequest()->getStatus()."</b>. ";
+
+            if ($this->getRequest()->getStatus() == \HTRouter::STATUS_HTTP_OK) {
+                print "The file we need to include is : " . $this->getRequest()->getDocumentRoot().$this->getRequest()->getFilename()."<br>\n";
+            } else {
+                print "We do not need to include a file but do something else: ".$this->getRequest()->getStatusLine()."<br>\n";
+                print "Our outgoing headers: ";
+                print "<pre>";
+                print_r ($this->getRequest()->getOutHeaders());
+            }
+
+            print "<h2>Server</h2><pre>";
+            print_r ($_SERVER);
 
             print "<h2>Request</h2><pre>";
             print_r($this->getRequest());
@@ -149,33 +159,6 @@ class HTRouter {
         // Order the hooks
         ksort($this->_hooks);
     }
-
-//    /**
-//     * Init .htaccess routing by parsing all htaccess lines and check for validity (at least, check if the directives
-//     * are known) and set data inside the request.
-//     *
-//     * @return mixed
-//     */
-//    protected function _initHtaccess() {
-//        // @TODO: We must parse the HTAccess per directory traveling downwards until we reach the document-root!
-//        $htaccessPath = $this->getRequest()->getDocumentRoot() . "/" . self::HTACCESS_FILE;
-//
-//        // Check existence of HTACCESS
-//        if (! file_exists ($htaccessPath)) {
-//            return;
-//        }
-//
-//        // Read HTACCESS
-//        $f = fopen($htaccessPath, "r");
-//        $this->getRequest()->config->setHTAccessFileResource($f);
-//
-//        // Parse config
-//        $this->parseConfig($this->getRequest()->config->getHTAccessFileResource());
-//
-//        // Remove from config and close file
-//        $this->getRequest()->config->unsetHTAccessFileResource();
-//        fclose($f);
-//    }
 
 
     /**
@@ -584,17 +567,26 @@ class HTRouter {
             $request->setDocumentRoot($_SERVER['DOCUMENT_ROOT']);
         }
 
-//        $utils = new \HTRouter\Utils();
-//        $filename = $utils->findUriOnDisk($request, $_SERVER['SCRIPT_NAME']);
-        // Path is absolute. Strip docroot
-        $fn = $_SERVER['SCRIPT_FILENAME'];
+        // Find the correct filename we want to fetch. Must work on both PHPDevServer and Apache
+        $fn = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : $_SERVER['SCRIPT_FILENAME'];
         if (strpos($fn, $request->getDocumentRoot()) === 0) {
+            // It must be relative to the documentRoot!
             $fn = substr($fn, strlen($request->getDocumentRoot()));
+        }
+
+        // Check if the router has to be removed. Useful when using through Apache
+        if (isset($this->_mainConfig['global']['apacherouterprefix'])) {
+            if (strpos($fn, $this->_mainConfig['global']['apacherouterprefix']) === 0) {
+                $fn = substr($fn, strlen($this->_mainConfig['global']['apacherouterprefix']));
+
+                $fn = $_SERVER['REQUEST_URI'];
+            }
         }
         $request->setFilename($fn);
 
-        if (isset($_SERVER['PATH_INFO']))
+        if (isset($_SERVER['PATH_INFO'])) {
             $request->setPathInfo($_SERVER['PATH_INFO']);
+        }
 
 
         // Set INPUT headers
@@ -629,8 +621,19 @@ class HTRouter {
         $request->setMethod($_SERVER['REQUEST_METHOD']);
         $request->setProtocol($_SERVER['SERVER_PROTOCOL']);
         $request->setStatus(\HTRouter::STATUS_HTTP_OK);
+
+
+        // These are again, depending on the type of server. Strip the router.php if needed
         $request->setUnparsedUri($_SERVER['REQUEST_URI']);
         $request->setUri($_SERVER['SCRIPT_NAME']);
+
+        // Check if we need to remove our router info
+        if (isset($this->_mainConfig['global']['apacherouterprefix'])) {
+            $routerName = $this->_mainConfig['global']['apacherouterprefix'];
+            if ($_SERVER['SCRIPT_NAME'] == $routerName) {
+                // Remove router name
+            }
+        }
 
         // Let SetEnvIf etc do their thing
         $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);

@@ -104,19 +104,13 @@ class Core extends Module {
      * @return int
      */
     protected function _directoryWalk(\HTRouter\Request $request) {
-        // No file found!?
+        // No filename found to start from?
         $fn = $request->getFilename();
         if (empty($fn)) {
             return \HTRouter::STATUS_OK;
         }
 
-//        // Path is absolute. Strip docroot
-//        if (strpos($fn, $request->getDocumentRoot()) === 0) {
-//            $fn = substr($fn, strlen($request->getDocumentRoot()));
-//        }
-
-        // @TODO: We should stop until we have reached the documentroot!?
-
+        // get htaccess name from config or constant
         $config = $request->getMainConfig();
         if (isset ($config['global']['htaccessfilename'])) {
             $htaccessFilename = $config['global']['htaccessfilename'];
@@ -125,19 +119,22 @@ class Core extends Module {
         }
 
         /* Create an array with the following paths:
+         *
          *   /
          *   /wwwroot
          *   /wwwroot/router
          *   /wwwroot/router/public
-         * So we can do a simple iteration without worrying about stuff
+         *
+         * So we can do a simple iteration without worrying about stuff. Easier to reverse the process if needed.
          */
         $dirs = array();
         $path = explode("/", dirname($fn));
+        if (empty($path[count($path)-1])) array_pop($path);
         while (count($path) > 0) {
             $dirs[] = $request->getDocumentRoot() . join("/", $path);
             array_pop($path);
         }
-        //$dirs = array_reverse($dirs);
+        $dirs = array_unique($dirs);    // Just in case...
 
         // Iterate directories and find htaccess files
         foreach ($dirs as $dir) {
