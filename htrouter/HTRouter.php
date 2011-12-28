@@ -80,8 +80,8 @@ class HTRouter {
         // Initialize all modules
         $this->_initModules();
 
-        // Read htaccess
-        $this->_initHtaccess();
+//        // Read htaccess
+//        $this->_initHtaccess();
 
         // Do actual running
         $status = $this->_run();
@@ -150,33 +150,43 @@ class HTRouter {
         ksort($this->_hooks);
     }
 
+//    /**
+//     * Init .htaccess routing by parsing all htaccess lines and check for validity (at least, check if the directives
+//     * are known) and set data inside the request.
+//     *
+//     * @return mixed
+//     */
+//    protected function _initHtaccess() {
+//        // @TODO: We must parse the HTAccess per directory traveling downwards until we reach the document-root!
+//        $htaccessPath = $this->getRequest()->getDocumentRoot() . "/" . self::HTACCESS_FILE;
+//
+//        // Check existence of HTACCESS
+//        if (! file_exists ($htaccessPath)) {
+//            return;
+//        }
+//
+//        // Read HTACCESS
+//        $f = fopen($htaccessPath, "r");
+//        $this->getRequest()->config->setHTAccessFileResource($f);
+//
+//        // Parse config
+//        $this->parseConfig($this->getRequest()->config->getHTAccessFileResource());
+//
+//        // Remove from config and close file
+//        $this->getRequest()->config->unsetHTAccessFileResource();
+//        fclose($f);
+//    }
+
+
     /**
-     * Init .htaccess routing by parsing all htaccess lines and check for validity (at least, check if the directives
-     * are known) and set data inside the request.
+     * Logs error and returns 500 code when status has been declined. If the status is a normal HTTP response,
+     * it may pass. A simple way to filter out status-codes that are !STATUS_OK.
      *
-     * @return mixed
+     * @param $status
+     * @param $str
+     * @param HTRouter\Request $request
+     * @return int
      */
-    protected function _initHtaccess() {
-        $htaccessPath = $this->getRequest()->getDocumentRoot() . "/" . self::HTACCESS_FILE;
-
-        // Check existence of HTACCESS
-        if (! file_exists ($htaccessPath)) {
-            return;
-        }
-
-        // Read HTACCESS
-        $f = fopen($htaccessPath, "r");
-        $this->getRequest()->config->setHTAccessFileResource($f);
-
-        // Parse config
-        $this->parseConfig($this->getRequest()->config->getHTAccessFileResource());
-
-        // Remove from config and close file
-        $this->getRequest()->config->unsetHTAccessFileResource();
-        fclose($f);
-    }
-
-
     protected function _declDie($status, $str, \HTRouter\Request $request) {
         if ($status == self::STATUS_DECLINED) {
             $request->logError(\HTRouter\Request::ERRORLEVEL_ERROR, "configuration error: $str returns $status");
@@ -186,6 +196,15 @@ class HTRouter {
         }
     }
 
+    /**
+     * Run all modules that are hooked onto this particular hook. This emulates Apache's
+     * APR_IMPLEMENT_EXTERNAL_HOOK_RUN_* macro's.
+     *
+     * @param $hook
+     * @param int $runtype
+     * @return int
+     * @throws LogicException
+     */
     protected function _runHook($hook, $runtype = self::RUNHOOK_ALL) {
         // Check if something is actually registered to this hook.
         if (!isset ($this->_hooks[$hook])) {
@@ -477,7 +496,7 @@ class HTRouter {
      * @param $line
      * @return null
      */
-    function parseConfig($f, $terminateLine = "") {
+    function parseConfig(\HTRouter\Request $request, $f, $terminateLine = "") {
         if (! is_resource($f)) {
             throw new \UnexpectedValueException("Must be a config resource");
         }
@@ -529,7 +548,7 @@ class HTRouter {
             // Call the <keyword>Directive() function inside the corresponding module
             $module = $tmp[0];               // Object
             $method = $tmp[1]."Directive";   // Method
-            $module->$method($this->getRequest(), $match[2]);
+            $module->$method($request, $match[2]);
         }
     }
 
@@ -546,7 +565,7 @@ class HTRouter {
         $request->setMainconfig($this->_getMainConfig());
 
         // By default, we don't have any authentication
-        $request->setAuthType(null);
+        //$request->setAuthType(null);
         $request->setUser("");
 
         // Query arguments
@@ -559,11 +578,20 @@ class HTRouter {
 
         // @TODO: Find requesting file?
         // NOTE: Must be set before checking findUriOnDisk!
-        $request->setDocumentRoot($_SERVER['DOCUMENT_ROOT']);
+        if (isset($this->_mainConfig['global']['documentroot'])) {
+            $request->setDocumentRoot($this->_mainConfig['global']['documentroot']);
+        } else {
+            $request->setDocumentRoot($_SERVER['DOCUMENT_ROOT']);
+        }
 
-        $utils = new \HTRouter\Utils();
-        $filename = $utils->findUriOnDisk($request, $_SERVER['REQUEST_URI']);
-        $request->setFilename($filename);
+//        $utils = new \HTRouter\Utils();
+//        $filename = $utils->findUriOnDisk($request, $_SERVER['SCRIPT_NAME']);
+        // Path is absolute. Strip docroot
+        $fn = $_SERVER['SCRIPT_FILENAME'];
+        if (strpos($fn, $request->getDocumentRoot()) === 0) {
+            $fn = substr($fn, strlen($request->getDocumentRoot()));
+        }
+        $request->setFilename($fn);
 
         if (isset($_SERVER['PATH_INFO']))
             $request->setPathInfo($_SERVER['PATH_INFO']);

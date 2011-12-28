@@ -12,3 +12,6 @@ Maybe:
 
 Check:
 [ ] Should we pass the router or the request to modules? Looks like the only (correct) thing we do is $router->getRequest() anyway
+
+
+[ ] When dealing with multiple htaccess files, we should only set configuration items. Now, the setAuthType does not function!

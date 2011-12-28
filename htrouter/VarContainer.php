@@ -2,7 +2,7 @@
 
 namespace HTRouter;
 
-class VarContainer {
+class VarContainer implements \IteratorAggregate {
     protected $_vars = array();
 
     // @TODO: It's a kind of magic...
@@ -10,6 +10,9 @@ class VarContainer {
     function __construct() {
     }
 
+    function getIterator() {
+        return new \ArrayIterator($this->_vars);
+    }
 
     // the get* functions allows a parameter. This is the return value when the actual item is not found.
     function __call($name, $arguments)
@@ -49,6 +52,22 @@ class VarContainer {
                 unset($this->_vars[$name]);
             }
             return null;
+        }
+    }
+
+
+    /**
+     * Merge another container with this container. We get precedence.
+     *
+     * @param VarContainer $container
+     */
+    function merge(\HTRouter\VarContainer $container) {
+//        $this->_vars = $this->_vars + iterator_to_array($container);
+        foreach ($container as $k => $v) {
+            if (! isset($this->_vars[$k])) {
+                // Not yet set. Set it.
+                $this->_vars[$k] = $v;
+            }
         }
     }
 }

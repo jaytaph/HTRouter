@@ -235,15 +235,15 @@ class Request {
         return $this->_args;
     }
 
-    public function setAuthType(\HTRouter\AuthModule $authType = null)
-    {
-        $this->_authType = $authType;
-    }
+//    public function setAuthType(\HTRouter\AuthModule $authType = null)
+//    {
+//        $this->_authType = $authType;
+//    }
 
     // Module that authenticates: Basic | Digest
     public function getAuthType()
     {
-        return $this->_authType;
+        return $this->config->getAuthType();
     }
 
     public function setContentEncoding($contentEncoding)
