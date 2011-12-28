@@ -21,11 +21,11 @@ class User extends \AuthzModule {
     public function AuthzUserAuthoritativeDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => "on", "off" => "off"));
-        $request->vars->setAuthzUserAuthoritative($value);
+        $request->config->setAuthzUserAuthoritative($value);
     }
 
     public function checkUserAccess(\HTRouter\Request $request) {
-        // Any will do, and we are already authenticted through the "allow/deny" rules. No Need to check this.
+        // Any will do, and we are already authenticated through the "allow/deny" rules. No Need to check this.
         // @TODO: This code must be moved to HTRouter::_run()
         if ($request->vars->getSatisfy() == "any" && $request->getAuthorized()) {
             return \AuthModule::AUTHZ_GRANTED;

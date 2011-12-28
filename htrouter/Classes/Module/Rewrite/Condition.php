@@ -387,7 +387,7 @@ class Condition {
         $string = str_replace("%{TIME}", date("YmdHis"), $string);  // %04d%02d%02d%02d%02d%02d
 
         // @TODO: Make sure these get* functions exists
-        $string = str_replace("%{API_VERSION}", $request->getApiVersion(), $string);
+        $string = str_replace("%{API_VERSION}", \HTRouter::API_VERSION, $string);
         $string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);
         $string = str_replace("%{REQUEST_URI}", $request->getServerVar("REQUEST_URI"), $string);
         $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);

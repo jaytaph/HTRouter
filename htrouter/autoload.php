@@ -5,14 +5,11 @@
  */
 spl_autoload_register("htrouter_autoloader");
 
-// Generic apache functionality
-require_once "Apache.php";
-
 function htrouter_autoloader($class) {
 
     // We need to strip HTROUTER\\ namespace
-    if (strpos($class, "HTRouter\\") === 0) {
-        $class = str_replace("HTRouter\\", "", $class);
+    if (strpos(strtolower($class), "htrouter\\") === 0) {
+        $class = str_ireplace("HTRouter\\", "", $class);
     }
 
     // Namespace to directory conversion

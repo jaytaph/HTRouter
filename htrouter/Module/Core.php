@@ -12,15 +12,15 @@ class Core extends Module {
     {
         parent::init($router);
 
+        // Core directives
         $router->registerDirective($this, "require");
         $router->registerDirective($this, "satisfy");
         $router->registerDirective($this, "<ifmodule");
+        $router->registerDirective($this, "AuthName");
+        $router->registerDirective($this, "AuthType");
 
         // Default values
         $router->getRequest()->config->setSatisfy("all");
-
-//        // Set the (default) request URI. This might be changed or rewritten
-//        $router->getRequest()->setURI($_SERVER['REQUEST_URI']);
     }
 
     public function requireDirective(\HTRouter\Request $request, $line) {
@@ -44,12 +44,29 @@ class Core extends Module {
         // Check if module exists
         if (! $this->getRouter()->findModule($module)) {
             // Module does not exist, so skip this configuration block
-            $this->getRouter()->skipConfig($request->getHTAccessFileResource(), "</IfModule>");
+            $this->getRouter()->skipConfig($request->config->getHTAccessFileResource(), "</IfModule>");
         } else {
             // Module does exist, read this configuration block
-            $this->getRouter()->parseConfig($request->getHTAccessFileResource(), "</IfModule>");
+            $this->getRouter()->parseConfig($request->config->getHTAccessFileResource(), "</IfModule>");
+        }
+    }
+
+    public function authNameDirective(\HTRouter\Request $request, $line) {
+        $line = trim($line);
+        $line = trim($line, "\"\'");
+        $request->config->setAuthName($line);
+    }
+
+    public function authTypeDirective(\HTRouter\Request $request, $line) {
+        $name = "auth_".strtolower(trim($line));
+
+        // @TODO: We should check that we have the correct AUTH_* module loaded
+        $plugin = $this->getRouter()->findModule($name);
+        if (! $plugin) {
+            throw new \UnexpectedValueException("Cannot find $name");
         }
 
+        $request->config->setAuthType($plugin);
     }
 
 
@@ -74,7 +91,6 @@ class Core extends Module {
     // <FilesMatch>
     // ForceType
     // <IfDefine>
-    // <IfModule>
     // <Limit>
     // <LimitExcept>
     // LimitRequestBody

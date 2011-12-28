@@ -92,8 +92,6 @@ class Request {
         return null;
     }
 
-
-
 //
 //
 //    function setApiVersion($version) {
@@ -191,15 +189,20 @@ class Request {
 //        return ($this->getHttps() === true);
 //    }
 
-
     /**
-     * Get or set errors that might have occurred.
+     * Set errors that might have occurred.
      *
      * @param $error
      */
     function logError($error) {
         $this->_errors[] = $error;
     }
+
+    /**
+     * Returns all errors in this request
+     *
+     * @return array
+     */
     function getErrors() {
         return $this->_errors;
     }
@@ -230,9 +233,13 @@ class Request {
     protected $_authType;
     protected $_server;
 
+    // additional items
+    protected $_documentRoot;
+
 
     public function setArgs($args)
     {
+        // Query string
         $this->_args = $args;
     }
 
@@ -241,12 +248,12 @@ class Request {
         return $this->_args;
     }
 
-    public function setAuthType($authType)
+    public function setAuthType(\HTRouter\Module\Auth $authType = null)
     {
         $this->_authType = $authType;
     }
 
-    // Module that authenticates Basic | Digest (or the actual Module? makes more sense!)
+    // Module that authenticates: Basic | Digest
     public function getAuthType()
     {
         return $this->_authType;
@@ -432,6 +439,16 @@ class Request {
     function getStatusLine() {
         $utils = new \HTRouter\Utils();
         return $utils->getStatusLine($this->getStatus());
+    }
+
+    public function setDocumentRoot($documentRoot)
+    {
+        $this->_documentRoot = $documentRoot;
+    }
+
+    public function getDocumentRoot()
+    {
+        return $this->_documentRoot;
     }
 
 }

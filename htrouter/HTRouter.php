@@ -18,10 +18,10 @@ class HTRouter {
     const API_VERSION = "123.45";       // Useless API version
 
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
-    const STATUS_DECLINED                   =   1;
-    const STATUS_OK                         =   2;
+    const STATUS_DECLINED                   =   0;
+    const STATUS_OK                         =   1;
     const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
-    const STATUS_HTTP_FORBIDDEN             = 403;
+    const STATUS_HTTP_UNAUTHORIZED          = 403;
     const STATUS_HTTP_INTERNAL_SERVER_ERROR = 500;
 
     // Provider constants
@@ -37,7 +37,7 @@ class HTRouter {
 //    const HOOK_QUICK_HANDLER        = 30;
 //    const HOOK_PRE_CONNECTION       = 35;
 //    const HOOK_PROCESS_CONNECTION   = 40;
-//    const HOOK_POST_READ_REQUEST    = 45;
+    const HOOK_POST_READ_REQUEST    = 45;
 //    const HOOK_LOG_TRANSACTION      = 50;
     const HOOK_TRANSLATE_NAME       = 55;
     const HOOK_MAP_TO_STORAGE       = 60;
@@ -46,8 +46,9 @@ class HTRouter {
     const HOOK_FIXUPS               = 75;
     const HOOK_CHECK_TYPE           = 80;
     const HOOK_CHECK_ACCESS         = 85;
-    const HOOK_CHECK_AUTHN          = 90;
-    const HOOK_CHECK_AUTHZ          = 95;
+    const HOOK_CHECK_AUTH           = 90;
+//    const HOOK_CHECK_AUTHZ          = 95;
+//    const HOOK_CHECK_AUTHN          = 90;
 //    const HOOK_INSERT_FILTER       = 100;
 
 
@@ -61,12 +62,17 @@ class HTRouter {
     /**
      * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
      */
-    function __construct($request = null) {
+    function __construct($request = null, $populate = true) {
         // Initialize request
         if ($request == null) {
             $this->_request = new \HTRouter\Request($this);
         } else {
             $this->_request = $request;
+        }
+
+        // Populate the request if needed.
+        if ($populate) {
+            $this->_populateInitialRequest($this->getRequest());
         }
     }
 
@@ -83,8 +89,6 @@ class HTRouter {
      * Call this to route your stuff with .htaccess rules
      */
     public function route() {
-        $this->_initServer();
-
         // Initialize all modules
         $this->_initModules();
 
@@ -98,22 +102,7 @@ class HTRouter {
         $this->_fini();
 
         print "<hr>";
-        print "We are done. The file we need to include is : ".$this->getRequest()->getUri()."<br>\n";
-
-        print "<h3>Environment</h3>";
-        foreach ($this->getRequest()->getEnvironment() as $key => $val) {
-            print "K: $key   V: $val <br>\n";
-        }
-    }
-
-    /**
-     * Initializes default server settings so we can emulate Apache
-     */
-    protected function _initServer() {
-
-        // Set default values for our request
-        $this->getRequest()->setApiVersion(self::API_VERSION);
-        $this->getRequest()->setHttps(false);
+        print "We are done. The file we need to include is : ".$this->getRequest()->getFilename()."<br>\n";
     }
 
     /**
@@ -163,13 +152,13 @@ class HTRouter {
 
         // Read HTACCESS
         $f = fopen($htaccessPath, "r");
-        $this->getRequest()->setHTAccessFileResource($f);
+        $this->getRequest()->config->setHTAccessFileResource($f);
 
         // Parse config
-        $this->parseConfig($this->getRequest()->getHTAccessFileResource());
+        $this->parseConfig($this->getRequest()->config->getHTAccessFileResource());
 
         // Remove from config and close file
-        $this->getRequest()->unsetHTAccessFileResource();
+        $this->getRequest()->config->unsetHTAccessFileResource();
         fclose($f);
     }
 
@@ -184,6 +173,11 @@ class HTRouter {
     }
 
     protected function _runHook($hook, $runtype = self::RUNHOOK_ALL) {
+        // Check if something is actually registered to this hook.
+        if (!isset ($this->_hooks[$hook])) {
+            return self::STATUS_OK;
+        }
+
         foreach ($this->_hooks[$hook] as $hook) {
             // Every hook as 0 or more "modules" hooked
             foreach ($hook as $modules) {
@@ -222,16 +216,13 @@ class HTRouter {
     }
 
     /**
-     * Run the actual hooked plugins. It should be just as simple as stated here..
+     * This should look somewhat similar to request.c:ap_process_request_internal()
      */
     protected function _run() {
         $utils = new \HTRouter\Utils();
-        $r = $this->getRequest();
+        $r = $this->getRequest();       // just an alias
 
-        // This should look somewhat similar to request.c:ap_process_request_internal()
-
-        // Skip proxy stuff. We don't do proxy
-
+        // If you are looking for proxy stuff. It's not here to simplify things
 
         // Remove /. /.. and // from the URI
         $realUri = $utils->getParents($r->getUri());
@@ -240,12 +231,12 @@ class HTRouter {
 
         if ($r->isMainRequest() && $r->getFileName()) {
             $status = $this->_locationWalk($r);
-            if ($status) {
+            if ($status != self::STATUS_DECLINED) {
                 return $status;
             }
 
             $status = $this->_runHook(self::HOOK_TRANSLATE_NAME, self::RUNHOOK_FIRST);
-            if ($status) {
+            if ($status != self::STATUS_DECLINED) {
                 return $this->_declDie($status, "translate", $r);
             }
         }
@@ -255,37 +246,103 @@ class HTRouter {
 
 
         $status = $this->_runHook(self::HOOK_MAP_TO_STORAGE, self::RUNHOOK_FIRST);
-        if ($status) {
+        if ($status != self::STATUS_DECLINED) {
             return $status;
         }
 
         // Rerun location walk (@TODO: Find out why)
-        if ($status) {
+        if ($status != self::STATUS_DECLINED) {
             return $status;
         }
 
         if ($r->isMainRequest()) {
             $status = $this->_runHook(self::HOOK_HEADER_PARSER, self::RUNHOOK_FIRST);
-            if ($status) {
+            if ($status != self::STATUS_DECLINED) {
                 return $status;
             }
         }
 
-        // We always reauthenticate, something request.c doesn't do for optimizing. Easy enough to create
+        // We always re-authenticate. Something request.c doesn't do for optimizing. Easy enough to create though.
         $this->_authenticate($r);
 
-
         $status = $this->_runHook(self::HOOK_CHECK_TYPE, self::RUNHOOK_FIRST);
-        if ($status != 0) {
+        if ($status != self::STATUS_DECLINED) {
             return $this->_declDie($status, "find types", $r);
         }
 
         $status = $this->_runHook(self::HOOK_FIXUPS, self::RUNHOOK_ALL);
-        if ($status) {
+        if ($status != self::STATUS_DECLINED) {
             return $status;
         }
 
         return OK;
+    }
+
+    /**
+     * Do the authentication
+     */
+    protected function _authenticate(\HTRouter\Request $request) {
+        switch ($request->config->getSatisfy("all")) {
+            default :
+            case "all" :
+                $status = $this->_runHook(self::HOOK_CHECK_ACCESS, self::RUNHOOK_ALL);
+                if ($status  != 0) {
+                    return $this->_declDie($status, "check access", $request);
+                }
+
+                // We only do this if there are any "requires". Without requires, we do not need authentication
+                if (count($request->config->getRequire(array())) > 0) {
+                    $status = $this->_runHook(self::HOOK_CHECK_USER_ID, self::RUNHOOK_FIRST);
+                    if ($request->getAuthType() == null) {
+                        $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != 0) {
+                        $this->_declDie($status, "Check user failure", $request);
+                    }
+
+                    $status = $this->_runHook(self::HOOK_CHECK_AUTH, self::RUNHOOK_FIRST);
+                    if ($request->getAuthType() == null) {
+                        $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != 0) {
+                        $this->_declDie($status, "Check access failure", $request);
+                    }
+                }
+                break;
+            case "any" :
+                $status = $this->_runHook(self::HOOK_CHECK_ACCESS, self::RUNHOOK_ALL);
+                if ($status != 0) {
+
+                    // No requires needed
+                    if (count($request->config->getRequire(array())) == 0) {
+                        $this->_declDie($status, "check access", $request);
+                    }
+
+                    $status = $this->_runHook(self::HOOK_CHECK_USER_ID, self::RUNHOOK_FIRST);
+                    if ($request->getAuthType() == null) {
+                        $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != 0) {
+                        $this->_declDie($status, "Check user failure", $request);
+                    }
+
+                    $status = $this->_runHook(self::HOOK_CHECK_AUTH, self::RUNHOOK_FIRST);
+                    if ($request->getAuthType() == null) {
+                        $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != 0) {
+                        $this->_declDie($status, "Check access failure", $request);
+                    }
+                }
+                break;
+        }
+    }
+
+
+    /**
+     * Do a location walk to check if we are still OK on the location (i guess)...
+     *
+     * @param HTRouter\Request $request
+     */
+    protected function _locationWalk(\HTRouter\Request $request) {
+        // Since we don't have any locations, we just return
+        return self::STATUS_OK;
     }
 
     /**
@@ -502,4 +559,79 @@ class HTRouter {
 //        exit;
 //    }
 
+
+    protected function _populateInitialRequest(\HTRouter\Request $request) {
+        /**
+         * A lot of stuff is already filtered by either apache or the built-in webserver. We just have to
+         * populate our request so we have a generic state which we can work with. From this point on, it
+         * should never matter on what kind of webserver we are actually working on (in fact: this can be
+         * the base of writing your own webserver like nanoweb)
+         */
+
+        // By default, we don't have any authentication
+        // @TODO: What about authentication? Where do we set this?
+        $request->setAuthType(null);
+        $request->setUser("");
+
+        // Query arguments
+        parse_str($_SERVER['QUERY_STRING'], $args);
+        $request->setArgs($args);
+
+        $request->setContentEncoding("");
+        $request->setContentLanguage("");
+        $request->setContentType("text/plain");
+
+        // @TODO: Find requesting file?
+        // NOTE: Must be set before checking findUriOnDisk!
+        $request->setDocumentRoot($_SERVER['DOCUMENT_ROOT']);
+
+        $utils = new \HTRouter\Utils();
+        $filename = $utils->findUriOnDisk($request, $_SERVER['REQUEST_URI']);
+        $request->setFilename($filename);
+
+        if (isset($_SERVER['PATH_INFO']))
+            $request->setPathInfo($_SERVER['PATH_INFO']);
+
+
+        // Set INPUT headers
+        foreach ($_SERVER as $key => $item) {
+            if (! is_string($key)) continue;
+            if (substr($key, 0, 5) != "HTTP_") continue;
+
+            $key = substr($key, 5);
+            $key = strtolower($key);
+            $key = str_replace("_", "-", $key);
+
+            $key = preg_replace_callback("/^(.)|-(.)/", function ($matches) { return strtoupper($matches[0]); }, $key);
+            $request->appendInHeaders($key, $item);
+        }
+
+        // We don't have the actual host-header, but we misuse the http_host for this
+        $tmp = parse_url($_SERVER['HTTP_HOST']);
+        $request->setHostname(isset($tmp['host'])?$tmp['host']:$tmp['path']);
+
+        $request->setMethod($_SERVER['REQUEST_METHOD']);
+        $request->setProtocol($_SERVER['SERVER_PROTOCOL']);
+        $request->setStatus(\HTRouter::STATUS_HTTP_OK);
+        $request->setUnparsedUri($_SERVER['REQUEST_URI']);
+        $request->setUri($_SERVER['SCRIPT_NAME']);
+
+        // Let SetEnvIf etc do their thing
+        $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);
+    }
+
+
+    /**
+     * Copies a request into a new (sub)request. Also takes care of additional handlers/hooks
+     *
+     * @param HTRouter\Request $request
+     */
+    function copyRequest(\HTRouter\Request $request) {
+        $new = \HTRouter\Request($request->getRouter());
+
+        // Let SetEnvIf etc do their thing, again
+        $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);
+
+        return $new;
+    }
 }

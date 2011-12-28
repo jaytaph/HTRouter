@@ -9,19 +9,29 @@ namespace HTRouter\Module\Auth;
 
 class Basic extends \AuthModule {
 
-    public function authenticateUser(\HTRouter\Request $request) {
+    public function init(\HTRouter $router)
+    {
+        parent::init($router);
 
-        // Parse authentication request
-        $auth = $request->getAuthentication();
-        list ($auth_scheme, $auth_params)  = explode(" ", $auth, 2);
-        if (strtolower($auth_scheme) != "basic") {
-            return \AuthModule::AUTH_NOT_FOUND;     // We need BASIC authentication form the client
+        $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateBasicUser"));
+    }
+
+    public function authenticateBasicUser(\HTRouter\Request $request) {
+        if ($request->config->getAuthType()->getName() != "Basic") {
+            return \HTRouter::STATUS_DECLINED;
         }
 
-        // Split user/pass
-        $auth_params = base64_decode($auth_params);
-        list ($user, $pass) = explode(":", $auth_params);
+        // Check realm
+        if (! $request->config->getAuthName()) {
+            $request->logError("need authname: ".$request->getUri());
+            return \HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR;
+        }
 
+        $ret = $this->_getBasicAuth($request);
+        if (! is_array($ret)) {
+            return $ret;
+        }
+        list($user, $pass) = $ret;
 
         // By default, we are not found
         $result = \AuthModule::AUTH_NOT_FOUND;
@@ -38,19 +48,60 @@ class Basic extends \AuthModule {
         }
 
         // Set the authenticated user inside the request
-        if ($result == \AuthModule::AUTH_GRANTED) {
-            $request->setAuthenticatedUser($user);
-            $request->setIsAuthenticated(true);
+        if ($result != \AuthModule::AUTH_GRANTED) {
+
+            if ($request->config->getAuthzUserAuthoritative() && $result != \AuthModule::AUTH_DENIED) {
+                // Not authoritative so we decline and goto the next checker
+                return \HTRouter::STATUS_DECLINED;
+            }
+
+            switch ($result) {
+                case \AuthModule::AUTH_DENIED :
+                    $retval = \HTRouter::STATUS_HTTP_UNAUTHORIZED;
+                    break;
+                case \AuthModule::AUTH_NOT_FOUND :
+                    $retval = \HTRouter::STATUS_HTTP_UNAUTHORIZED;
+                    break;
+                default:
+                    $retval = \HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR;
+                    break;
+            }
+
+            // If we need to send a 403, do it
+            if ($retval == \HTRouter::STATUS_HTTP_UNAUTHORIZED) {
+                note_basic_auth_failure(r);
+            }
+
+            return $result;
         }
-        return $result;
+
+        return \HTRouter::STATUS_OK;
     }
 
-    public function getAuthType() {
+    /**
+     * Returns either int or array[2] with user/pass
+     *
+     * @param $request
+     * @return array|int
+     */
+    function _getBasicAuth(\HTRouter\Request $request) {
+        // Parse authentication request
+        $auth = $request->getAuthentication();
+        list ($auth_scheme, $auth_params)  = explode(" ", $auth, 2);
+        if (strtolower($auth_scheme) != "basic") {
+            return \AuthModule::AUTH_NOT_FOUND;     // We need BASIC authentication form the client
+        }
+
+        // Split user/pass
+        $auth_params = base64_decode($auth_params);
+        return explode(":", $auth_params, 2);
+    }
+
+    public function getName() {
         return "Basic";
     }
 
     public function getAliases() {
         return array("mod_auth_basic.c", "auth_basic");
     }
-
 }

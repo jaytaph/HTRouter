@@ -22,28 +22,23 @@ class Rewrite extends Module {
         $router->registerDirective($this, "RewriteOptions");
         $router->registerDirective($this, "RewriteRule");
 
-        // Lots of hooks
-        $router->registerHook(\HTRouter::HOOK_HANDLER, array($this, "handlerRedirect"));
-        $router->registerHook(\HTRouter::HOOK_PRE_CONFIG, array($this, "preConfig"));
-        $router->registerHook(\HTRouter::HOOK_POST_CONFIG, array($this, "postConfig"));
-        $router->registerHook(\HTRouter::HOOK_CHILD_INIT, array($this, "childInit"));
-
+        // Only register the hooks that are of value to us
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixUp"), 0);
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "mimeType"), 99);
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "uriToFile"), 0);
 
         // Default values
-        $router->getRequest()->setRewriteEngine(false);
+        $router->getRequest()->config->setRewriteEngine(false);
     }
 
     public function RewriteEngineDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils();
         $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
-        $request->setRewriteEngine($value);
+        $request->config->setRewriteEngine($value);
     }
 
     public function RewriteBaseDirective(\HTRouter\Request $request, $line) {
-        $request->setRewriteBase($line);
+        $request->config->setRewriteBase($line);
     }
 
     /**
@@ -61,14 +56,14 @@ class Rewrite extends Module {
         }
 
         $condition = new Condition($args[0], $args[1], $args[2]);
-        $request->appendTempRewriteConditions($condition);
+        $request->config->appendTempRewriteConditions($condition);
     }
 
     public function RewriteOptionsDirective(\HTRouter\Request $request, $line) {
         if ($line != "inherit") {
             throw new \UnexpectedValueException("RewriteOptions must be 'inherit'");
         }
-        $request->setRewriteOptions("inherit");
+        $request->config->setRewriteOptions("inherit");
     }
 
     public function RewriteRuleDirective(\HTRouter\Request $request, $line) {
@@ -79,39 +74,19 @@ class Rewrite extends Module {
         }
 
         $rule = new Rule($request, $args[0], $args[1], $args[2]);
-        foreach ($request->getTempRewriteConditions(array()) as $condition) {
+        foreach ($request->config->getTempRewriteConditions(array()) as $condition) {
             $rule->addCondition($condition);
         }
-        $request->appendRewriteRule($rule);
+        $request->config->appendRewriteRule($rule);
 
         // Clear the current rewrite conditions
-        $request->unsetTempRewriteConditions();
+        $request->config->unsetTempRewriteConditions();
     }
 
 
     /**
      * Define the hooks
      */
-    function handlerRedirect(\HTRouter\Request $request) {
-        // Internal redirect handler. Needed?
-        return \HTRouter::STATUS_DECLINED;
-    }
-
-    function preConfig(\HTRouter\Request $request) {
-        // Not needed. Only used for RewriteMap
-        return \HTRouter::STATUS_DECLINED;
-    }
-
-    function postConfig(\HTRouter\Request $request) {
-        // Not needed. Only used for RewriteMap and RewriteLogs
-        return \HTRouter::STATUS_DECLINED;
-    }
-
-    function childInit(\HTRouter\Request $request) {
-        // Not needed. Only used for RewriteMap
-        return \HTRouter::STATUS_DECLINED;
-    }
-
     function fixUp(\HTRouter\Request $request) {
         // [RewriteRules in directory context]
         if ($request->getRewriteEngine() == false) {

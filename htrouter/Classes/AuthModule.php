@@ -12,5 +12,5 @@ abstract class AuthModule extends Module {
     const AUTHZ_DENIED       = 2;
     const AUTHZ_NOT_FOUND    = 3;
 
-    abstract public function authenticateUser(\HTRouter\Request $request);
+    abstract public function getName();
 }
