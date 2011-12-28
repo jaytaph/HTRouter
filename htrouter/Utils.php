@@ -315,7 +315,7 @@ class Utils {
 
     function getStatusLine($status) {
         if (! key_exists($status, $this->_statusLines)) {
-            throw new \OutOfBoundsException("Cannot find the statusline for this HTTP status");
+            throw new \OutOfBoundsException("Cannot find the statusline for HTTP status $status");
         }
         return $this->_statusLines[$status];
     }

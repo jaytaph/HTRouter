@@ -29,7 +29,6 @@ class Alias extends Module {
 
         // We should check if "status" is given. If not, it defaults to 302
         $redirect->http_status = 302;   // temporary status by default
-        $redirect->http_status = "Found";
 
         // parse argument list
         $args = explode(" ", $line);
@@ -37,24 +36,19 @@ class Alias extends Module {
             // We have 3 arguments, which means the first argument is the 'status'
             $redirect->http_status = 0;
             if (strtolower($args[0]) == "permanent") {
-                $redirect->http_code = 301;
-                $redirect->http_status = "Moved permanently";
+                $redirect->http_status = 301;
             } elseif (strtolower($args[0]) == "temp") {
-                $redirect->http_code = 302;
-                $redirect->http_status = "Found";
+                $redirect->http_status = 302;
             } elseif (strtolower($args[0]) == "seeother") {
-                $redirect->http_code = 303;
-                $redirect->http_status = "See Other";
+                $redirect->http_status = 303;
             } elseif (strtolower($args[0]) == "gone" && count(args) == 2) {
                 // Gone does not have 3 arguments, but 2!
                 $redirect->http_status = 410;
-                $redirect->http_status = "Gone";
             } elseif (is_numeric($args[0]) && $args[0] >= 300 && $args[0] <= 399) {
-                $redirect->http_code = $args[0];
-                $redirect->http_status = "Moved"; // @TODO: what is the default status we return?
+                $redirect->http_status = $args[0];
             }
 
-            if ($redirect->http_code == 0) {
+            if ($redirect->http_status == 0) {
                 throw new \UnexpectedValueException("redirect does not have correct first argument (of three)");
             }
 
@@ -95,13 +89,19 @@ class Alias extends Module {
     }
 
     public function translateName(\HTRouter\Request $request) {
+        // Need an (absolute) url
+        $uri = $request->getUri();
+        if (empty($uri) && $uri[0] != '/') {
+            return \HTRouter::STATUS_DECLINED;
+        }
+
         // check if name matches one of the redirects
-        foreach ($request->getRedirects() as $redirect) {
-            $pos = strpos($request->getURI(), $redirect->urlpath);
+        foreach ($request->config->getRedirects() as $redirect) {
+            // @TODO: Check if this is OK?
+            $pos = strpos($request->getUri(), $redirect->urlpath);
             if ($pos === 0) {
-                $this->getRouter()->createRedirect($redirect->http_code, $redirect->http_status, $redirect->url);
-                exit;
-                //$request->setURI($redirect->url);
+                $request->appendOutHeaders("Location", $redirect->url);
+                return $redirect->http_status;
             }
         }
 

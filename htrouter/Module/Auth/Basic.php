@@ -7,7 +7,7 @@
 
 namespace HTRouter\Module\Auth;
 
-class Basic extends \AuthModule {
+class Basic extends \HTRouter\AuthModule {
 
     public function init(\HTRouter $router)
     {
@@ -17,7 +17,7 @@ class Basic extends \AuthModule {
     }
 
     public function authenticateBasicUser(\HTRouter\Request $request) {
-        if ($request->config->getAuthType()->getName() != "Basic") {
+        if ($request->getAuthType()->getName() != "Basic") {
             return \HTRouter::STATUS_DECLINED;
         }
 
@@ -29,37 +29,38 @@ class Basic extends \AuthModule {
 
         $ret = $this->_getBasicAuth($request);
         if (! is_array($ret)) {
+            $request->appendOutHeaders("WWW-Authenticate", "Basic realm=\"".$request->config->getAuthName()."\"");
             return $ret;
         }
         list($user, $pass) = $ret;
 
         // By default, we are not found
-        $result = \AuthModule::AUTH_NOT_FOUND;
+        $result = \HTRouter\AuthModule::AUTH_NOT_FOUND;
 
         // Iterator through all the registered providers to
         $providers = $this->getRouter()->getProviders(\HTRouter::PROVIDER_AUTHN_GROUP);
         foreach ($providers as $provider) {
             $result = $provider->checkPassword($request, $user, $pass);
 
-            if ($result != \AuthModule::AUTH_NOT_FOUND) {
+            if ($result != \HTRouter\AuthModule::AUTH_NOT_FOUND) {
                 // Found (either denied or granted), we don't need to check any more providers
                 break;
             }
         }
 
         // Set the authenticated user inside the request
-        if ($result != \AuthModule::AUTH_GRANTED) {
+        if ($result != \HTRouter\AuthModule::AUTH_GRANTED) {
 
-            if ($request->config->getAuthzUserAuthoritative() && $result != \AuthModule::AUTH_DENIED) {
+            if ($request->config->getAuthzUserAuthoritative() && $result != \HTRouter\AuthModule::AUTH_DENIED) {
                 // Not authoritative so we decline and goto the next checker
                 return \HTRouter::STATUS_DECLINED;
             }
 
             switch ($result) {
-                case \AuthModule::AUTH_DENIED :
+                case \HTRouter\AuthModule::AUTH_DENIED :
                     $retval = \HTRouter::STATUS_HTTP_UNAUTHORIZED;
                     break;
-                case \AuthModule::AUTH_NOT_FOUND :
+                case \HTRouter\AuthModule::AUTH_NOT_FOUND :
                     $retval = \HTRouter::STATUS_HTTP_UNAUTHORIZED;
                     break;
                 default:
@@ -69,7 +70,7 @@ class Basic extends \AuthModule {
 
             // If we need to send a 403, do it
             if ($retval == \HTRouter::STATUS_HTTP_UNAUTHORIZED) {
-                note_basic_auth_failure(r);
+                $request->appendOutHeaders("WWW-Authenticate", "Basic realm=\"".$request->config->getAuthName()."\"");
             }
 
             return $result;
@@ -86,10 +87,13 @@ class Basic extends \AuthModule {
      */
     function _getBasicAuth(\HTRouter\Request $request) {
         // Parse authentication request
-        $auth = $request->getAuthentication();
+        $auth = $request->getInHeaders("Authorization");
+        if (! $auth) {
+            return \HTRouter::STATUS_HTTP_UNAUTHORIZED;
+        }
         list ($auth_scheme, $auth_params)  = explode(" ", $auth, 2);
         if (strtolower($auth_scheme) != "basic") {
-            return \AuthModule::AUTH_NOT_FOUND;     // We need BASIC authentication form the client
+            return \HTRouter::STATUS_HTTP_UNAUTHORIZED;
         }
 
         // Split user/pass

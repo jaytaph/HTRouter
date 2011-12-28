@@ -9,7 +9,7 @@
 
 namespace HTRouter\Module\Authn;
 
-class File Extends \AuthnModule {
+class File Extends \HTRouter\AuthnModule {
 
     public function init(\HTRouter $router)
     {
@@ -48,11 +48,11 @@ class File Extends \AuthnModule {
 
             // Note: case SENSITIVE:  jay != JAY
             if ($chk_user == $user and $utils->validatePassword($pass, $chk_pass)) {
-                return \AuthModule::AUTH_GRANTED;
+                return \HTRouter\AuthModule::AUTH_GRANTED;
             }
         }
 
-        return \AuthModule::AUTH_DENIED;
+        return \HTRouter\AuthModule::AUTH_DENIED;
     }
 
     public function getAliases() {

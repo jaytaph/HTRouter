@@ -66,7 +66,8 @@ class Core extends Module {
             throw new \UnexpectedValueException("Cannot find $name");
         }
 
-        $request->config->setAuthType($plugin);
+        // Attention: this is set inside the request, not the configuration!
+        $request->setAuthType($plugin);
     }
 
 

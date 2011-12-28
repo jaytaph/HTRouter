@@ -1,5 +1,7 @@
 <?php
 
+namespace HTRouter;
+
 use HTRouter\Module;
 
 abstract class AuthModule extends Module {

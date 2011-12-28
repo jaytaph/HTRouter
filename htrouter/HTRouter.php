@@ -18,10 +18,12 @@ class HTRouter {
     const API_VERSION = "123.45";       // Useless API version
 
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
-    const STATUS_DECLINED                   =   0;
-    const STATUS_OK                         =   1;
+    const STATUS_DECLINED                   =  -1;
+    const STATUS_OK                         =   0;
     const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
-    const STATUS_HTTP_UNAUTHORIZED          = 403;
+    const STATUS_HTTP_MOVED_PERMANENTLY     = 302;
+    const STATUS_HTTP_UNAUTHORIZED          = 401;
+    const STATUS_HTTP_FORBIDDEN             = 403;
     const STATUS_HTTP_INTERNAL_SERVER_ERROR = 500;
 
     // Provider constants
@@ -95,14 +97,31 @@ class HTRouter {
         // Read htaccess
         $this->_initHtaccess();
 
-        // Parse htaccess
-        $this->_run();
+        // Do actual running
+        $status = $this->_run();
+        $this->getRequest()->setStatus($status);
 
         // Cleanup
         $this->_fini();
 
-        print "<hr>";
-        print "We are done. The file we need to include is : ".$this->getRequest()->getFilename()."<br>\n";
+        // Output data
+        if (isset($_GET['debug'])) {
+            // There is something seriously wrong with me....
+            print "<hr>";
+            print "We are done. Status <b>".$this->getRequest()->getStatus()."</b> The file we need to include is : ".$this->getRequest()->getFilename()."<br>\n";
+
+            print "<h2>Request</h2><pre>";
+            print_r($this->getRequest());
+            exit;
+        }
+
+        // Output
+        $r = $this->getRequest();
+        header($r->getProtocol()." ".$r->getStatus()." ".$r->getStatusLine());
+        foreach ($r->getOutHeaders() as $k => $v) {
+            header("$k: $v");
+        }
+        exit;
     }
 
     /**
@@ -163,9 +182,9 @@ class HTRouter {
     }
 
 
-    protected function _declDie($status, $str, \HTRouter\Request $r) {
+    protected function _declDie($status, $str, \HTRouter\Request $request) {
         if ($status == self::STATUS_DECLINED) {
-            $r->logError("configuration error: $str returns $status");
+            $request->logError("configuration error: $str returns $status");
             return self::STATUS_HTTP_INTERNAL_SERVER_ERROR;
         } else {
             return $status;
@@ -180,35 +199,31 @@ class HTRouter {
 
         foreach ($this->_hooks[$hook] as $hook) {
             // Every hook as 0 or more "modules" hooked
-            foreach ($hook as $modules) {
-                // Every module has 0 or more callbacks
-                foreach ($modules as $callback) {
-                    // Run the callback
-                    $class = $callback[0];
-                    $method = $callback[1];
-                    $retval = $class->$method($this->getRequest());
+            foreach ($hook as $module) {
+                // Run the callback
+                $class = $module[0];
+                $method = $module[1];
+                print "&bull; Running: ".get_class($class)." => $method <br>\n";
+                $retval = $class->$method($this->getRequest());
 
-                    // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
-                    if (! is_numeric($retval)) {
-                        throw new \LogicException("Return value must be a STATUS_* constant: found in ".get_class($class)." ->$method!");
-                    }
+                // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
+                if (! is_numeric($retval)) {
+                    throw new \LogicException("Return value must be a STATUS_* constant: found in ".get_class($class)." ->$method!");
+                }
 
+                if ($runtype == self::RUNHOOK_VOID) {
+                    // Don't care about result. Just continue with the next
+                    continue;
+                }
 
-                    if ($runtype == self::RUNHOOK_VOID) {
-                        // Don't care about result. Just continue with the next
-                        continue;
-                    }
+                if ($runtype == self::RUNHOOK_ALL && ($retval != self::STATUS_OK && $retval != self::STATUS_DECLINED)) {
+                    // Only HTTP STATUS will return
+                    return $retval;
+                }
 
-                    if ($runtype == self::RUNHOOK_ALL && ($retval != self::STATUS_OK || $retval != self::STATUS_DECLINED)) {
-                        // Only HTTP STATUS will return
-                        return $retval;
-                    }
-
-                    if ($runtype == self::RUNHOOK_FIRST && $retval != self::STATUS_DECLINED) {
-                        // OK and HTTP STATUS will return
-                        return $retval;
-                    }
-
+                if ($runtype == self::RUNHOOK_FIRST && $retval != self::STATUS_DECLINED) {
+                    // OK and HTTP STATUS will return
+                    return $retval;
                 }
             }
         }
@@ -231,12 +246,12 @@ class HTRouter {
 
         if ($r->isMainRequest() && $r->getFileName()) {
             $status = $this->_locationWalk($r);
-            if ($status != self::STATUS_DECLINED) {
+            if ($status != self::STATUS_OK) {
                 return $status;
             }
 
             $status = $this->_runHook(self::HOOK_TRANSLATE_NAME, self::RUNHOOK_FIRST);
-            if ($status != self::STATUS_DECLINED) {
+            if ($status != self::STATUS_OK) {
                 return $this->_declDie($status, "translate", $r);
             }
         }
@@ -246,36 +261,41 @@ class HTRouter {
 
 
         $status = $this->_runHook(self::HOOK_MAP_TO_STORAGE, self::RUNHOOK_FIRST);
-        if ($status != self::STATUS_DECLINED) {
+        if ($status != self::STATUS_OK) {
             return $status;
         }
 
         // Rerun location walk (@TODO: Find out why)
-        if ($status != self::STATUS_DECLINED) {
+        if ($status != self::STATUS_OK) {
             return $status;
         }
 
         if ($r->isMainRequest()) {
             $status = $this->_runHook(self::HOOK_HEADER_PARSER, self::RUNHOOK_FIRST);
-            if ($status != self::STATUS_DECLINED) {
+            if ($status != self::STATUS_OK) {
                 return $status;
             }
         }
 
         // We always re-authenticate. Something request.c doesn't do for optimizing. Easy enough to create though.
-        $this->_authenticate($r);
+        $status = $this->_authenticate($r);
+        if ($status != self::STATUS_OK) {
+            return $status;
+        }
 
         $status = $this->_runHook(self::HOOK_CHECK_TYPE, self::RUNHOOK_FIRST);
-        if ($status != self::STATUS_DECLINED) {
+        if ($status != self::STATUS_OK) {
             return $this->_declDie($status, "find types", $r);
         }
 
         $status = $this->_runHook(self::HOOK_FIXUPS, self::RUNHOOK_ALL);
-        if ($status != self::STATUS_DECLINED) {
+        if ($status != self::STATUS_OK) {
             return $status;
         }
 
-        return OK;
+        // If everything is ok. Note that we return 200 OK instead of "OK" since we need to return a code for the
+        // router to work with...
+        return self::STATUS_HTTP_OK;
     }
 
     /**
@@ -286,7 +306,7 @@ class HTRouter {
             default :
             case "all" :
                 $status = $this->_runHook(self::HOOK_CHECK_ACCESS, self::RUNHOOK_ALL);
-                if ($status  != 0) {
+                if ($status  != \HTRouter::STATUS_OK) {
                     return $this->_declDie($status, "check access", $request);
                 }
 
@@ -295,43 +315,45 @@ class HTRouter {
                     $status = $this->_runHook(self::HOOK_CHECK_USER_ID, self::RUNHOOK_FIRST);
                     if ($request->getAuthType() == null) {
                         $this->_declDie($status, "AuthType not set", $request);
-                    } elseif ($status != 0) {
-                        $this->_declDie($status, "Check user failure", $request);
+                    } elseif ($status != \HTRouter::STATUS_OK) {
+                        return $this->_declDie($status, "Check user failure", $request);
                     }
 
                     $status = $this->_runHook(self::HOOK_CHECK_AUTH, self::RUNHOOK_FIRST);
                     if ($request->getAuthType() == null) {
-                        $this->_declDie($status, "AuthType not set", $request);
-                    } elseif ($status != 0) {
-                        $this->_declDie($status, "Check access failure", $request);
+                        return $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != \HTRouter::STATUS_OK) {
+                        return $this->_declDie($status, "Check access failure", $request);
                     }
                 }
                 break;
             case "any" :
                 $status = $this->_runHook(self::HOOK_CHECK_ACCESS, self::RUNHOOK_ALL);
-                if ($status != 0) {
+                if ($status != \HTRouter::STATUS_OK) {
 
                     // No requires needed
                     if (count($request->config->getRequire(array())) == 0) {
-                        $this->_declDie($status, "check access", $request);
+                        return $this->_declDie($status, "check access", $request);
                     }
 
                     $status = $this->_runHook(self::HOOK_CHECK_USER_ID, self::RUNHOOK_FIRST);
                     if ($request->getAuthType() == null) {
-                        $this->_declDie($status, "AuthType not set", $request);
-                    } elseif ($status != 0) {
-                        $this->_declDie($status, "Check user failure", $request);
+                        return $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != \HTRouter::STATUS_OK) {
+                        return $this->_declDie($status, "Check user failure", $request);
                     }
 
                     $status = $this->_runHook(self::HOOK_CHECK_AUTH, self::RUNHOOK_FIRST);
                     if ($request->getAuthType() == null) {
-                        $this->_declDie($status, "AuthType not set", $request);
-                    } elseif ($status != 0) {
-                        $this->_declDie($status, "Check access failure", $request);
+                        return $this->_declDie($status, "AuthType not set", $request);
+                    } elseif ($status != \HTRouter::STATUS_OK) {
+                        return $this->_declDie($status, "Check access failure", $request);
                     }
                 }
                 break;
         }
+
+        return self::STATUS_OK;
     }
 
 
@@ -517,49 +539,6 @@ class HTRouter {
     }
 
 
-
-//    /**
-//     * Returns a 401 response to the client, and exists
-//     *
-//     * @codeCoverageIgnore
-//     */
-//    function createAuthenticateResponse() {
-//        // We are not authorized. Return a 401
-//        $plugin = $this->getRequest()->getAuthType();
-//
-//        // Return a 401
-//        header('HTTP/1.1 401 Unauthorized');
-//        header('WWW-Authenticate: '.$plugin->getAuthType().' realm="'.$this->getRequest()->getAuthName().'"');
-//        exit;
-//    }
-//
-//    /**
-//     * Returns a 401 response to the client, and exists
-//     *
-//     * @codeCoverageIgnore
-//     */
-//    function createForbiddenResponse() {
-//        // Return a 403
-//        header('HTTP/1.1 403 Forbidden');
-//        exit;
-//    }
-//
-//    /**
-//     * Create a redirection with HTTP_CODE HTTP_STATUS and an optional location header
-//     *
-//     * @codeCoverageIgnore
-//     *
-//     * @param $code
-//     * @param $status
-//     * @param string $url
-//     */
-//    function createRedirect($code, $status, $url = "") {
-//        header("HTTP/1.1 $code $status");
-//        if ($url != "") header("Location: ".$url);  // No URL when "GONE"
-//        exit;
-//    }
-
-
     protected function _populateInitialRequest(\HTRouter\Request $request) {
         /**
          * A lot of stuff is already filtered by either apache or the built-in webserver. We just have to
@@ -605,6 +584,18 @@ class HTRouter {
             $key = preg_replace_callback("/^(.)|-(.)/", function ($matches) { return strtoupper($matches[0]); }, $key);
             $request->appendInHeaders($key, $item);
         }
+
+        /*
+         * Apache does not send us the Authorization variable. So this piece of code checks if apache_request_headers
+         * function is present (we are running the router from apache(compatible) browser), and add the authorization
+         * header.
+         */
+        if (function_exists("apache_request_headers")) {
+            $tmp = apache_request_headers();
+            if (isset($tmp['Authorization'])) {
+                $request->appendInHeaders('Authorization', $tmp['Authorization']);
+            }
+         }
 
         // We don't have the actual host-header, but we misuse the http_host for this
         $tmp = parse_url($_SERVER['HTTP_HOST']);

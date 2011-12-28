@@ -92,109 +92,13 @@ class Request {
         return null;
     }
 
-//
-//
-//    function setApiVersion($version) {
-//        $this->config->setApiVersion($version);
-//    }
-//    function getAuthenticatedUser() {
-//        return $this->config->getAuthenticatedUser();
-//    }
-//    function getPathInfo() {
-//        return $this->config->getPathInfo();
-//    }
-//    function getAuthType() {
-//        return $this->config->getAuthType();
-//    }
-//    function getApiVersion() {
-//        return $this->config->getApiVersion();
-//    }
-//    function getTheRequest() {
-//        return $this->config->getTheRequest();
-//    }
-//    function getHttps() {
-//        return $this->config->getHttps();
-//    }
-//    function setHttps($arg) {
-//        return $this->config->setHttps($arg);
-//    }
-//
-//
-//    function getEnvironment() {
-//        if (! isset ($this->_vars['environment'])) {
-//            $this->_vars['environment'] = false;
-//        }
-//        return $this->_vars['environment'];
-//    }
-//
-//
-//
-//
-//
-//
-//    /**
-//     * @return array
-//     */
-//    function getHeaders() {
-//        return apache_request_headers();
-//    }
-//
-//    /**
-//     * @param $key
-//     * @param $val
-//     */
-//    function appendEnvironment($key, $val) {
-//        if (! isset($this->_vars['environment'])) {
-//            $this->_vars['environment'] = array();
-//        }
-//        $this->_vars['environment'][$key] = $val;
-//    }
-//
-//    /**
-//     * @param $key
-//     */
-//    function removeEnvironment($key) {
-//        if (isset($this->_vars['environment'])) {
-//            unset($this->_vars['environment'][$key]);
-//        }
-//    }
-//
-//
-//    /**
-//     * @return mixed
-//     */
-//    function getIp() {
-//        return $_SERVER['REMOTE_ADDR'];
-//    }
-//
-//    /**
-//     * @return mixed
-//     */
-//    function getDocumentRoot() {
-//        return $_SERVER['DOCUMENT_ROOT'];
-//    }
-//
-//
-//    function getServerVar($item) {
-//        $item = strtoupper($item);
-//
-//        if (isset ($_SERVER[$item])) {
-//            return $_SERVER[$item];
-//        }
-//        return "";
-//    }
-//
-//
-//    function isHttps() {
-//        return ($this->getHttps() === true);
-//    }
-
     /**
      * Set errors that might have occurred.
      *
      * @param $error
      */
     function logError($error) {
+        print "&bull;<b>Error:</b><font color=#4169e1>. $error</font><br>";
         $this->_errors[] = $error;
     }
 
@@ -217,8 +121,8 @@ class Request {
     protected $_hostname;
     protected $_method;
     protected $_status;
-    protected $_inHeaders;
-    protected $_outHeaders;
+    protected $_inHeaders = array();
+    protected $_outHeaders = array();
     protected $_contentType;
     protected $_contentEncoding;
     protected $_contentLanguage;
@@ -229,8 +133,8 @@ class Request {
     protected $_args;
     protected $_perDirConfig;
     protected $_requestConfig;
-    protected $_user;
-    protected $_authType;
+    protected $_user = "";
+    protected $_authType = null;
     protected $_server;
 
     // additional items
@@ -248,7 +152,7 @@ class Request {
         return $this->_args;
     }
 
-    public function setAuthType(\HTRouter\Module\Auth $authType = null)
+    public function setAuthType(\HTRouter\AuthModule $authType = null)
     {
         $this->_authType = $authType;
     }
@@ -310,14 +214,17 @@ class Request {
         return $this->_hostname;
     }
 
-    public function appendInHeaders($inHeaders)
+    public function appendInHeaders($key, $value)
     {
-        $this->_inHeaders = $inHeaders;
+        $this->_inHeaders[$key] = $value;
     }
 
     // Returns INPUT headers
-    public function getInHeaders()
+    public function getInHeaders($header = null)
     {
+        if ($header) {
+            return isset($this->_inHeaders[$header]) ? $this->_inHeaders[$header] : null;
+        }
         return $this->_inHeaders;
     }
 
@@ -332,14 +239,17 @@ class Request {
         return $this->_method;
     }
 
-    public function appendOutHeaders($outHeaders)
+    public function appendOutHeaders($key, $value)
     {
-        $this->_outHeaders = $outHeaders;
+        $this->_outHeaders[$key] = $value;
     }
 
     // Returns OUTPUT headers
-    public function getOutHeaders()
+    public function getOutHeaders($header = null)
     {
+        if ($header) {
+            return isset($this->_outHeaders[$header]) ? $this->_outHeaders[$header] : null;
+        }
         return $this->_outHeaders;
     }
 

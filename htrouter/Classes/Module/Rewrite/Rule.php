@@ -253,7 +253,7 @@ class Rule {
     }
 
 
-    function rewrite($url_path) {
+    function rewrite(\HTRouter\Request $request) {
         $utils = new \HTRouter\Utils();
 
         // Check if pattern matches
@@ -261,20 +261,20 @@ class Rule {
         if ($this->hasFlag(Flag::TYPE_NOCASE)) {
             $regex .= "i";
         }
-        $match = (preg_match($regex, $url_path) >= 1);
+        $match = (preg_match($regex, $request->getUri()) >= 1);
         if ($this->_patternNegate) {
             $match = ! $match;
         }
 
         // We didn't match the pattern (or negative pattern). Return unmodified url_path
         if (! $match) {
-            return $url_path;
+            return \HTRouter::STATUS_OK;
         }
 
 
         if ($this->_substitutionType == self::TYPE_SUB_NONE) {
             // This is a dash, so no need to rewrite
-            return $url_path;
+            return \HTRouter::STATUS_OK;
         }
 
         if ($this->_substitutionType == self::TYPE_SUB) {
@@ -285,16 +285,13 @@ class Rule {
 
             // If it's the same host or redirect flag is on, we do a redirect
             if ($dst_url['host'] != $src_url['host'] || $this->hasFlag(Flag::TYPE_REDIRECT)) {
-                // @TODO: We must do a redirect here
-                // @codeCoverageIgnoreStart
                 $url = $utils->unparse_url($dst_url);
-                $this->getRequest()->getRouter()->createRedirect(302, "Moved permanently", $url);
-                exit;
-                // @codeCoverageIgnoreEnd
+                $request->appendOutHeaders("Location", $url);
+                return \HTRouter::STATUS_REDIRECT_PERMANENTLY;
             }
 
             // Change url_path
-            return $dst_url['path'];
+            $request->setUri($dst_url['path']);
         }
 
 

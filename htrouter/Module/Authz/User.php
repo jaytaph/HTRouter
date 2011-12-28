@@ -6,7 +6,7 @@
 
 namespace HTRouter\Module\Authz;
 
-class User extends \AuthzModule {
+class User extends \HTRouter\AuthzModule {
 
     public function init(\HTRouter $router)
     {

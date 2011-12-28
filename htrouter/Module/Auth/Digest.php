@@ -6,7 +6,7 @@
 
 namespace HTRouter\Module\Auth;
 
-class Digest extends \AuthModule {
+class Digest extends \HTRouter\AuthModule {
 
     public function init(\HTRouter $router)
     {

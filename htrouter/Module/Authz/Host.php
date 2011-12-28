@@ -6,7 +6,7 @@
 
 namespace HTRouter\Module\Authz;
 
-class Host Extends \AuthzModule {
+class Host Extends \HTRouter\AuthzModule {
     // The different order constants
     const ALLOW_THEN_DENY = 1;
     const DENY_THEN_ALLOW = 2;
@@ -87,27 +87,27 @@ class Host Extends \AuthzModule {
             case self::ALLOW_THEN_DENY :
                 $result = false;
                 if ($this->_findAllowDeny($request->config->getAccessAllow())) {
-                    $result = true;
+                    $result = \HTRouter::STATUS_OK;
                 }
                 if ($this->_findAllowDeny($request->config->getAccessDeny())) {
-                    $result = false;
+                    $result = \HTRouter::STATUS_HTTP_FORBIDDEN;
                 }
                 break;
             case self::DENY_THEN_ALLOW :
-                $result = true;
+                $result = \HTRouter::STATUS_OK;
                 if ($this->_findAllowDeny($request->config->getAccessDeny())) {
-                    $result = false;
+                    $result = \HTRouter::STATUS_HTTP_FORBIDDEN;
                 }
                 if ($this->_findAllowDeny($request->config->getAccessAllow())) {
-                    $result = true;
+                    $result = \HTRouter::STATUS_OK;
                 }
                 break;
             case self::MUTUAL_FAILURE :
                 if ($this->_findAllowDeny($request->config->getAccessAllow()) and
                     !$this->_findAllowDeny($request->config->getAccessDeny())) {
-                    $result = true;
+                    $result = \HTRouter::STATUS_OK;
                 } else {
-                    $result = false;
+                    $result = \HTRouter::STATUS_HTTP_FORBIDDEN;
                 }
                 break;
             default:
@@ -116,27 +116,15 @@ class Host Extends \AuthzModule {
         }
 
         // Not ok. Now we need to check if "satisfy any" already got a satisfaction
-        if ($result == false) {
-            if ($request->config->getSatisfy() == "any") {
+        if ($result == \HTRouter::STATUS_HTTP_FORBIDDEN &&
+           ($request->config->getSatisfy() == "any" || count($request->config->getRequires(array()) == 0))) {
                 // Check if there is at least one require line in the htaccess. If found, it means that
                 // we still have to possibility that we can be authorized
-
-                $requires = $request->getRequire();
-                if (is_array($requires) and count($requires) > 0) {
-                    // It's ok, we have at least 1 require statement, so we return true nevertheless
-                    $request->config->setAuthorized(true);
-                    return \HTRouter::STATUS_DECLINED;
-                }
-            }
-
-            // Not ok. Satisfy ALL or we didn't find a "require"
-            $this->getRouter()->createForbiddenResponse();
-            exit;
+                $request->logError("Access denied for ".$request->getFilename()." / ".$request->getUri());
         }
 
-        // Everything is ok
-        $request->config->setAuthorized(true);
-        return \HTRouter::STATUS_DECLINED;
+        // Return what we need to return
+        return $result;
     }
 
     protected function _findAllowDeny(array $items) {

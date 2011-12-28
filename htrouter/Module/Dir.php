@@ -91,19 +91,21 @@ class Dir extends Module {
         } elseif ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
             // Do fallback
             $path = $request->config->getFallbackResource();
-            if ($path == false) return false;
+            if ($path == false) {
+                return \HTRouter::STATUS_DECLINED;
+            }
             $url = $this->_updateUrl($request->getUri(), $path);
 
             $type = $utils->findUriFileType($request, $url);
             if ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
-                $this->getRouter()->createRedirect(302, "Moved permanently", $url);
-                exit;
+                $request->appendOutHeaders("Location", $url);
+                return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
             }
         } else {
             // We skip alternate handling (like /server-status etc)
         }
 
-        // It's possibly an existing file. We don't need to do any translations to it
+        // It's possible an existing file. We don't need to do any translations to it
         return \HTRouter::STATUS_DECLINED;
     }
 

@@ -3,6 +3,8 @@
  * Authentication module interface.
  */
 
+namespace HTRouter;
+
 use HTRouter\Module;
 
 abstract class AuthnModule extends Module {

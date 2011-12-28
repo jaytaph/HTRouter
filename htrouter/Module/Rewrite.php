@@ -89,15 +89,12 @@ class Rewrite extends Module {
      */
     function fixUp(\HTRouter\Request $request) {
         // [RewriteRules in directory context]
-        if ($request->getRewriteEngine() == false) {
+        if ($request->config->getRewriteEngine() == false) {
             return \HTRouter::STATUS_DECLINED;
         }
 
         // @TODO: We should strip the leading directory stuff
         // @TODO: Directory must not start with /:  so=> /my/dir/index.html => dir/index.html when using /my/dir/.htacces
-
-        // This is the URL we rewrite, it will change per rewriteUrl
-        $url_path = $request->getServerVar('SCRIPT_NAME');
 
         $skip = 0;
         $lastMatch = true;
@@ -107,7 +104,7 @@ class Rewrite extends Module {
 thenext:
 
         // Iterate all the rewrite rules in order!
-        foreach ($request->getRewriteRule() as $rule) {
+        foreach ($request->config->getRewriteRule() as $rule) {
             // Some flag must be parsed prior to checking stuff
             $chained = $rule->hasFlag(Flag::TYPE_CHAIN);
 
@@ -135,7 +132,10 @@ thenext:
 
             if ($match) {
                 // Rewrite only when matched
-                $url_path = $rule->rewrite($url_path);
+                $result = $rule->rewrite($request);
+                if ($result != \HTRouter::STATUS_OK || $result != \HTRouter::STATUS_DECLINED) {
+                    return $result;
+                }
 
                 // Do the flags that must be done after a match
                 foreach ($rule->getFlags() as $flag) {
@@ -201,12 +201,12 @@ thenext:
         // We set the mimetype last. This means that when we have N mimetype flags, only the last will be set.
         // We do this very late so our request does not get messed up with mimetypes I guess.
 
-        $mimeType = $request->getTempMimeType();
+        $mimeType = $request->config->getTempMimeType();
         if ($mimeType) {
             $request->setContentType($flag->getKey());
         }
 
-        $handler = $request->getTempHandler();
+        $handler = $request->config->getTempHandler();
         if ($handler) {
             throw new \Exception("We cannot set handler");
         }
