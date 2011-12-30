@@ -13,6 +13,9 @@ class HTRouter {
     // All registered providers
     protected $_providers = array();
 
+    // All found modules
+    protected $_modules = array();
+
     // The main request
     protected $_request;
 
@@ -55,6 +58,9 @@ class HTRouter {
 
     /**
      * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
+     *
+     * @param null $request request
+     * @param bool $populate Do we need to populate the request or not
      */
     function __construct($request = null, $populate = true) {
         // Read configuration
@@ -123,7 +129,7 @@ class HTRouter {
     /**
      * Returns the current request of the router.
      *
-     * @return HTRouter\Request
+     * @return HTRouter\Request The request
      */
     function getRequest() {
         return $this->_request;
@@ -140,6 +146,9 @@ class HTRouter {
         $it = new RecursiveIteratorIterator($it);
 
         foreach ($it as $file) {
+            /**
+             * @var $file SplFileInfo
+             */
             // @TODO: RegexIterator returns a file instead of a FileInfo Object :|
             // @TODO: RecursiveFilterIterator instead of this...
             if (! preg_match ('/^.+\.php$/i', $file->getBaseName())) continue;
@@ -150,6 +159,9 @@ class HTRouter {
             $p = str_replace(".php", "", $p);
             $class = "\\HTRouter\\Module\\".$p;
 
+            /**
+             * @var $module \HTRouter\Module
+             */
             $module = new $class();
             $module->init($this);
 
@@ -165,10 +177,10 @@ class HTRouter {
      * Logs error and returns 500 code when status has been declined. If the status is a normal HTTP response,
      * it may pass. A simple way to filter out status-codes that are !STATUS_OK.
      *
-     * @param $status
-     * @param $str
-     * @param HTRouter\Request $request
-     * @return int
+     * @param int $status The status code to check
+     * @param string $str Logstring
+     * @param HTRouter\Request $request The request (for logging)
+     * @return int status code
      */
     protected function _declDie($status, $str, \HTRouter\Request $request) {
         if ($status == self::STATUS_DECLINED) {
@@ -183,10 +195,15 @@ class HTRouter {
      * Run all modules that are hooked onto this particular hook. This emulates Apache's
      * APR_IMPLEMENT_EXTERNAL_HOOK_RUN_* macro's.
      *
-     * @param $hook
-     * @param int $runtype
-     * @return int
-     * @throws LogicException
+     * There are 3 different modes we can run:
+     *   RUNHOOK_ALL: run until we hit something that is not DECLINED or OK
+     *   RUNHOOK_FIRST: run until we hit the first non DECLINED
+     *   RUNHOOK_VOID: run everything, always. We throw away any status we get from the modules.
+     *
+     * @param mixed $hook Hook to run
+     * @param int $runtype The type of running
+     * @return int Status
+     * @throws LogicException When something wrong happens
      */
     protected function _runHook($hook, $runtype = self::RUNHOOK_ALL) {
         // Check if something is actually registered to this hook.
@@ -228,7 +245,9 @@ class HTRouter {
     }
 
     /**
-     * This should look somewhat similar to request.c:ap_process_request_internal()
+     * The actual processing of a request, this should look somewhat similar to request.c:ap_process_request_internal()
+     *
+     * @return int status
      */
     protected function _run() {
         $utils = new \HTRouter\Utils();
@@ -296,19 +315,28 @@ class HTRouter {
     }
 
     /**
-     * Do the authentication
+     * Do the authentication part of the request processing. It's a bit more complicated as the rest, so
+     * we moved it into a separate method.
+     *
+     * @param HTRouter\Request $request
+     * @return int Status
      */
     protected function _authenticate(\HTRouter\Request $request) {
+        // Authentication depends on the satisfy flag (defaults to ALL)
         switch ($request->config->getSatisfy("all")) {
             default :
             case "all" :
+                // Both access and authentication must be OK
                 $status = $this->_runHook(self::HOOK_CHECK_ACCESS, self::RUNHOOK_ALL);
                 if ($status  != \HTRouter::STATUS_OK) {
                     return $this->_declDie($status, "check access", $request);
                 }
 
-                // We only do this if there are any "requires". Without requires, we do not need authentication
+                // We only do this if there are any "requires". Without requires, we do not need to
+                // go into to the authentication process
                 if (count($request->config->getRequire(array())) > 0) {
+
+                    // Check authentication
                     $status = $this->_runHook(self::HOOK_CHECK_USER_ID, self::RUNHOOK_FIRST);
                     if ($request->getAuthType() == null) {
                         $this->_declDie($status, "AuthType not set", $request);
@@ -325,6 +353,7 @@ class HTRouter {
                 }
                 break;
             case "any" :
+                // Either access or authentication must be OK
                 $status = $this->_runHook(self::HOOK_CHECK_ACCESS, self::RUNHOOK_ALL);
                 if ($status != \HTRouter::STATUS_OK) {
 
@@ -358,6 +387,7 @@ class HTRouter {
      * Do a location walk to check if we are still OK on the location (i guess)...
      *
      * @param HTRouter\Request $request
+     * @return int Returns OK
      */
     protected function _locationWalk(\HTRouter\Request $request) {
         // Since we don't have any locations, we just return
@@ -374,7 +404,10 @@ class HTRouter {
 
     /**
      * Register a directive, a keyword that can be read from htaccess file
-     * @param $directive
+     *
+     * @param HTRouter\Module $module The module to register
+     * @param $directive The directive to register the module on
+     * @throws RuntimeException Thrown when the directive is already registered
      */
     public function registerDirective(\HTRouter\Module $module, $directive) {
         if ($this->_directiveExists($directive)) {
@@ -384,11 +417,11 @@ class HTRouter {
     }
 
     /**
-     * Register a hook
+     * Register a hook. Those hooks can be called from different places when needed by the HTRouter
      *
-     * @param $hook
+     * @param string $hook The name of the hook
      * @param array $callback The callback to the module->method
-     * @param int $order Order (0-100) of the modules that are added to the specified hook
+     * @param int $order Order (0-100) of the modules that are added to the specified hook. Only use 0 and 100 when you really mean it (REALLY_FIRST, REALLY_LAST)
      */
     public function registerHook($hook, array $callback, $order = 50) {
         // We can register our hooks with the "order".
@@ -400,8 +433,8 @@ class HTRouter {
      * Providers are not really hooks, but can be used for modules to add functionality. A good example
      * would be to register the authn_basic and authn_digest types.
      *
-     * @param $provider
-     * @param \HTRouter\Module $module
+     * @param string $provider The provider to register the module for
+     * @param \HTRouter\Module $module The module to register
      */
     public function registerProvider($provider, \HTRouter\Module $module) {
         $this->_providers[$provider][] = $module;
@@ -410,8 +443,8 @@ class HTRouter {
     /**
      * Check if directive exists, and return the module entry which holds this directive
      *
-     * @param $directive
-     * @return bool
+     * @param string $directive The directive to look for
+     * @return bool|mixed false when not found, otherwise return the directive's array(class, method)
      */
     protected function _directiveExists($directive) {
         $directive = strtolower($directive);
@@ -424,8 +457,8 @@ class HTRouter {
     /**
      * Get all data for specified provider. Normally this would be a list of objects conforming a specific interface.
      *
-     * @param $provider
-     * @return array
+     * @param string $provider The provider to return
+     * @return array All providers or empty array when nothing is found
      */
     function getProviders($provider) {
         if (! isset($this->_providers[$provider])) return array();
@@ -434,12 +467,19 @@ class HTRouter {
 
 
     /**
-     * Find specified module
+     * Finds and returns the specified module. Searching can be done on any name that is returned by the
+     * Module's getAliases() methods.
+     *
+     * @param $name The module to find
+     * @return null|\HTRouter\Module The found module, or null on nothing found
      */
     function findModule($name) {
         $name = strtolower($name);
 
         foreach ($this->_modules as $module) {
+            /**
+             * @var $module \HTRouter\Module
+             */
             foreach ($module->getAliases() as $alias) {
                 if (strtolower($alias) == $name) return $module;
             }
@@ -448,7 +488,13 @@ class HTRouter {
     }
 
 
-    // Skip a block from the configuration until we find 'terminateLine' (mostly a </tag>)
+    /**
+     * Skips lines from the configuration until we find 'terminateLine' (most of the time, a </tag>)
+     *
+     * @param resource $f File resource
+     * @param string $terminateLine The line on which it needs to terminate
+     * @throws UnexpectedValueException When $f is not a file resoure
+     */
     function skipConfig($f, $terminateLine) {
         if (! is_resource($f)) {
             throw new \UnexpectedValueException("Must be a config resource");
@@ -474,10 +520,13 @@ class HTRouter {
 
 
     /**
-     * Parse a line from the htaccess file
+     * Parse a complete or partial .htaccess file. When terminateLine is given, it will stop parsing until it finds
+     * that particular line. Used when parsing blocks like <ifModule> etc..
      *
-     * @param $line
-     * @return null
+     * @param HTRouter\Request $request Request to use during parsing
+     * @param resource $f The file resource
+     * @param string $terminateLine Additional line to end our reading (instead of EOF)
+     * @throws UnexpectedValueException Incorrect resource given
      */
     function parseConfig(\HTRouter\Request $request, $f, $terminateLine = "") {
         if (! is_resource($f)) {
@@ -536,6 +585,11 @@ class HTRouter {
     }
 
 
+    /**
+     * Initialize the request with standard values taken from the $_SERVER.
+     *
+     * @param HTRouter\Request $request The request to be filled
+     */
     protected function _populateInitialRequest(\HTRouter\Request $request) {
         /**
          * A lot of stuff is already filtered by either apache or the built-in webserver. We just have to
@@ -647,6 +701,7 @@ class HTRouter {
      * Copies a request into a new (sub)request. Also takes care of additional handlers/hooks
      *
      * @param HTRouter\Request $request
+     * @return HTRouter\Request The new copied request
      */
     function copyRequest(\HTRouter\Request $request) {
         $new = new \HTRouter\Request($this, $request);
@@ -661,8 +716,8 @@ class HTRouter {
     /**
      * Read INI configuration
      *
-     * @param $configPath
-     * @return mixed
+     * @param string $configPath The absolute path to the configuration file
+     * @return array Complete array with configuration
      */
     protected function _readConfig($configPath) {
         if (! is_readable($configPath)) return;
@@ -673,7 +728,7 @@ class HTRouter {
     /**
      * returns main htrouter configuration
      *
-     * @return array
+     * @return array The configuration
      */
     protected function _getMainConfig() {
         return $this->_mainConfig;
