@@ -21,13 +21,18 @@ class HTRouter {
 
     const API_VERSION = "123.45";       // Useless API version
 
+
+    const MAX_RECURSION = 15;           // @TODO: Must be set inside the configuration?
+
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
     const STATUS_DECLINED                   =  -1;
     const STATUS_OK                         =   0;
     const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
     const STATUS_HTTP_MOVED_PERMANENTLY     = 302;
+    const STATUS_HTTP_BAD_REQUEST           = 400;
     const STATUS_HTTP_UNAUTHORIZED          = 401;
     const STATUS_HTTP_FORBIDDEN             = 403;
+    const STATUS_HTTP_NOT_FOUND             = 404;
     const STATUS_HTTP_INTERNAL_SERVER_ERROR = 500;
 
     // Provider constants
@@ -125,11 +130,15 @@ class HTRouter {
         $this->_initModules();
 
         // Do actual running
-        $status = $this->_run();
+        $status = $this->_processRequest($this->_getRequest());
         $this->_getRequest()->setStatus($status);
 
         // Cleanup
         $this->_fini();
+
+
+        // Set our $_SERVER variables correctly according to our new request information
+        $this->_modifySuperGlobalServerVars();
 
         // Output data
         if (isset($_GET['debug'])) {
@@ -289,9 +298,8 @@ class HTRouter {
      *
      * @return int status
      */
-    protected function _run() {
+    protected function _processRequest(\HTRouter\Request $r) {
         $utils = new \HTRouter\Utils();
-        $r = $this->_getRequest();       // just an alias
 
         // If you are looking for proxy stuff. It's not here to simplify things
 
@@ -300,7 +308,8 @@ class HTRouter {
         $r->setUri($realUri);
 
 
-        if ($r->isMainRequest() && $r->getFileName()) {
+        // We don't have a filename yet, try to find the file that corresponds to the URI we need
+        if (! $r->isMainRequest() || ! $r->getFileName()) {
             $status = $this->_locationWalk($r);
             if ($status != self::STATUS_OK) {
                 return $status;
@@ -312,9 +321,7 @@ class HTRouter {
             }
         }
 
-
-        // Set per_dir_config to defaults
-
+        // @TODO: Set per_dir_config to defaults, is this still needed?
 
         $status = $this->_runHook(self::HOOK_MAP_TO_STORAGE, self::RUNHOOK_FIRST);
         if ($status != self::STATUS_OK) {
@@ -654,28 +661,6 @@ class HTRouter {
             $request->setDocumentRoot($_SERVER['DOCUMENT_ROOT']);
         }
 
-        // Find the correct filename we want to fetch. Must work on both PHPDevServer and Apache
-        $fn = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : $_SERVER['SCRIPT_FILENAME'];
-        if (strpos($fn, $request->getDocumentRoot()) === 0) {
-            // It must be relative to the documentRoot!
-            $fn = substr($fn, strlen($request->getDocumentRoot()));
-        }
-
-        // Check if the router has to be removed. Useful when using through Apache
-        if (isset($routerConfig['global']['apacherouterprefix'])) {
-            if (strpos($fn, $routerConfig['global']['apacherouterprefix']) === 0) {
-                $fn = substr($fn, strlen($routerConfig['global']['apacherouterprefix']));
-
-                $fn = $_SERVER['REQUEST_URI'];
-            }
-        }
-        $request->setFilename($fn);
-
-        if (isset($_SERVER['PATH_INFO'])) {
-            $request->setPathInfo($_SERVER['PATH_INFO']);
-        }
-
-
         // Set INPUT headers
         foreach ($_SERVER as $key => $item) {
             if (! is_string($key)) continue;
@@ -701,30 +686,42 @@ class HTRouter {
             }
          }
 
-        // We don't have the actual host-header, but we misuse the http_host for this
+        // We don't have the actual host-header, but we can use the http_host variable for this
         $tmp = parse_url($_SERVER['HTTP_HOST']);
-        $request->setHostname(isset($tmp['host'])?$tmp['host']:$tmp['path']);
+        $request->setHostname(isset($tmp['host']) ? $tmp['host'] : $tmp['path']);
 
         $request->setMethod($_SERVER['REQUEST_METHOD']);
         $request->setProtocol($_SERVER['SERVER_PROTOCOL']);
         $request->setStatus(\HTRouter::STATUS_HTTP_OK);
 
+        if (! isset($_SERVER['PATH_INFO'])) {
+            $_SERVER['PATH_INFO'] = "";
+        }
 
         // These are again, depending on the type of server. Strip the router.php if needed
         $request->setUnparsedUri($_SERVER['REQUEST_URI']);
-        $request->setUri($_SERVER['SCRIPT_NAME']);
+        $request->setUri($_SERVER['SCRIPT_NAME'] . $_SERVER['PATH_INFO']);
 
         // Check if we need to remove our router info
         if (isset($routerConfig['global']['apacherouterprefix'])) {
             $routerName = $routerConfig['global']['apacherouterprefix'];
-            if ($_SERVER['SCRIPT_NAME'] == $routerName) {
-                // Remove router name
+            if (strpos($_SERVER['REQUEST_URI'], $routerName) === 0) {
+                $uri = substr($_SERVER['REQUEST_URI'], strlen($routerName));
+                if ($uri === false) $uri = "/";
+                $request->setUnparsedUri($uri);
+            }
+
+            if (strpos($_SERVER['SCRIPT_NAME'] . $_SERVER['PATH_INFO'], $routerName) === 0) {
+                $uri = substr($_SERVER['SCRIPT_NAME'] . $_SERVER['PATH_INFO'], strlen($routerName));
+                if ($uri === false) $uri = "/";
+                $request->setUri($uri);
             }
         }
 
+        $request->setQueryString($_SERVER['QUERY_STRING']);
+
         // Let SetEnvIf etc do their thing
         $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);
-
 
         $this->_getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Populating new request done");
     }
@@ -771,4 +768,66 @@ class HTRouter {
     function _getLogger() {
         return $this->_container->getLogger();
     }
+
+
+    /**
+     * Modifies the superglobal $_SERVER variables.
+     */
+    protected function _modifySuperGlobalServerVars() {
+        $request = $this->_getRequest();
+
+        $_SERVER['PHP_SELF'] = $request->getFilename() . $request->getPathInfo();
+        $_SERVER['QUERY_STRING'] = $request->getQueryString();
+        $_SERVER['SCRIPT_FILENAME'] = $request->getDocumentRoot() . $request->getFilename();
+        $_SERVER['SCRIPT_NAME'] = $request->getFilename();
+        $_SERVER['REQUEST_URI'] = $request->getUnparsedUri();
+        $tmp = $request->getAuthDigest();
+        if (! empty($tmp)) $_SERVER['PHP_AUTH_DIGEST'] = $tmp;
+        $tmp = $request->getAuthUser();
+        if (! empty($tmp)) $_SERVER['PHP_AUTH_USER'] = $tmp;
+        $tmp = $request->getAuthPass();
+        if (! empty($tmp)) $_SERVER['PHP_AUTH_PW'] = $tmp;
+        $tmp = $request->getAuthType();
+        if (! empty($tmp)) $_SERVER['AUTH_TYPE'] = $tmp;
+
+
+        $_SERVER['PATH_INFO'] = $request->getPathInfo();
+    }
+
+
+
+    function _hasReachedRecursionLimits(\HTRouter\Request $request) {
+        $level = 0;
+        do {
+            $level++;
+            $request = $request->getParentRequest();
+        } while ($request);
+
+        return ($level > self::MAX_RECURSION);
+    }
+
+    /**
+     * @param string $uri
+     * @param HTRouter\Request $request
+     * @return HTRouter\Request Subrequest
+     */
+    function subRequestLookupUri($uri, \HTRouter\Request $request) {
+        $subRequest = $this->copyRequest($request);
+
+        $subRequest->setMethod("GET");
+        if ($uri[0] != '/') {
+            // Relative URI
+            $uri = $this->getUri() . $uri;
+        }
+
+        // @TODO: Check of recursion limits
+        if ($this->_hasReachedRecursionLimits($subRequest)) {
+            $subRequest->setStatus(\HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR);
+            return $subRequest;
+        }
+
+        $result = $this->_processRequest($subRequest);
+        return $result;
+    }
+
 }

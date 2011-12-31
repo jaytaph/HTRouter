@@ -93,12 +93,12 @@ class Alias extends Module {
     public function translateName(\HTRouter\Request $request) {
         // Need an (absolute) url
         $uri = $request->getUri();
-        if (empty($uri) && $uri[0] != '/') {
+        if (empty($uri) || $uri[0] != '/') {
             return \HTRouter::STATUS_DECLINED;
         }
 
         // check if name matches one of the redirects
-        foreach ($request->config->getRedirects() as $redirect) {
+        foreach ($this->getConfig()->getRedirects() as $redirect) {
             // @TODO: Check if this is OK?
             $pos = strpos($request->getUri(), $redirect->urlpath);
             if ($pos === 0) {

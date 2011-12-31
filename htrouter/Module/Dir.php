@@ -61,24 +61,44 @@ class Dir extends Module {
             $url = $utils->unparse_url($url);
 
             // Redirect permanently new slashed url ( http://example.org/dir => http://example.org/dir/ )
-            $this->getRouter()->createRedirect(302, "Moved permanently", $url);
-            exit;
+            $request->setUri($url);
+            return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
         }
+
+        // In case a subrequest throws an error
+        $error_notfound = false;
 
         // We can safely check and match against our directory index now
         $names = $this->getConfig()->getDirectoryIndex();
         $names[] = self::DEFAULT_DIRECTORY_INDEX_FILE;        // @TODO: Seriously wrong. This needs to be placed in config?
         foreach ($names as $name) {
             $url = $this->_updateUrl($request->getUri(), $name);
-            if ($utils->findUriFileType($request, $url) != \HTRouter\Utils::URI_FILETYPE_MISSING) {
-                $request->setUri($url);
-                return \HTRouter::STATUS_DECLINED;
+
+            $router = \HTRouter::getInstance();
+            $subrequest = $router->subRequestLookupUri($url, $request);
+
+            if (is_file($subrequest->getFilename())) {
+                $request->merge($subrequest);
+                return \HTRouter::STATUS_OK;
+            }
+
+            if ($subrequest->getStatus() >= 300 && $subrequest->getStatus() < 400) {
+                $request->merge($subrequest);
+                return $subrequest->getStatus();
+            }
+
+            if ($subrequest->getStatus() != \HTRouter::STATUS_HTTP_NOT_FOUND &&
+                $subrequest->getStatus() != \HTRouter::STATUS_HTTP_OK) {
+                $error_notfound = $subrequest->getStatus();
             }
         }
 
-        // Nothing found
+        // "error_notfound" is set? return error_notfound
+        if ($error_notfound) {
+            return $error_notfound;
+        }
 
-        // All done. Proceed to next module
+        // Nothing to be done. Proceed to next module
         return \HTRouter::STATUS_DECLINED;
     }
 

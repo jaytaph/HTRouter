@@ -1,18 +1,4 @@
-[.] Add module mod_rewrite
+[.] Fix module mod_rewrite
 [ ] Add default fallback module for auth
-[X] Make sure _run does work properly instead of just running hooks
-[X] Every hook should return constand (DENIED, OK, or HTTP_CODE etc). When HTTP_CODE, just do redirect,
-[X] Also emulate a request_rec so things will function more smoothly and concise with apache
 [ ] Trimming should be done by config parser, not the actual modules
-[X] Need to order phases correctly: auth comes before fixup! http://httpd.apache.org/docs/2.2/mod/mod_rewrite.html#rewritecond
-[X] Move logging and initialization into separate class
-
-Maybe:
-[ ] Have a generic htrouter.yml that can be parsed with all kind of info: generic flags, documentroot etc?
-
-Check:
-[ ] Should we pass the router or the request to modules? Looks like the only (correct) thing we do is $router->getRequest() anyway
-
-
-[X] When dealing with multiple htaccess files, we should only set configuration items. Now, the setAuthType does not function!
-[ ] We should deal with htaccess separately. Do not allow to inject configuration settings directly into the request!
+[ ] Correct path-info when dealing with apache router.php and uri: /router.php/test/blaat.php/this/is/pathinfo?debug

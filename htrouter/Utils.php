@@ -328,6 +328,10 @@ class Utils {
      * @return string
      */
     function getParents($uri) {
+        if ($uri == "/") {
+            return $uri;
+        }
+
         $newDirs = array();
         $dirs = explode("/", $uri);
 

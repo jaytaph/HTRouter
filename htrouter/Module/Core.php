@@ -21,7 +21,7 @@ class Core extends Module {
 
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_MAP_TO_STORAGE, array($this, "coreMapToStorage"), 100); // Really last!
-//        $router->registerHook(\HTRouter::HOOK_MAP_TO_STORAGE, array($this, "translateName"), 100); // Really last!
+        $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "coreTranslateName"), 100); // Really last!
 
 
         // Set default values
@@ -78,6 +78,18 @@ class Core extends Module {
 
 
 
+    function coreTranslateName(\HTRouter\Request $request) {
+        $uri = $request->getUri();
+        if (empty($uri) || $uri[0] != '/' || $uri == "*") {
+            $this->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_ERROR, "Invalid uri in request: ".$uri);
+            return \HTRouter::STATUS_HTTP_BAD_REQUEST;
+        }
+
+        $filename = $request->getUri();
+        $request->setFilename($filename);   // Remember, filename must be relative from documentroot!
+
+        return \HTRouter::STATUS_OK;
+    }
 
     /**
      * map to storage: walk over the directory and merge htaccess components.
@@ -141,7 +153,7 @@ class Core extends Module {
         // Iterate directories and find htaccess files
         foreach ($dirs as $dir) {
             $htaccessPath = $dir ."/".$htaccessFilename;
-            print "HTACCESS found at $htaccessPath ? : ".(is_readable($htaccessPath) ? "yes" : "no")."<br>\n";
+            print "\n\n<b>HTACCESS found at $htaccessPath ? : ".(is_readable($htaccessPath) ? "yes" : "no")."</b><br>\n";
 
             if (is_readable($htaccessPath)) {
                 // Read HTACCESS and merge information

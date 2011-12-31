@@ -95,9 +95,13 @@ class Request {
     protected $_args;
     protected $_perDirConfig;
     protected $_requestConfig;
-    protected $_user = "";
+    protected $_authDigest = "";
+    protected $_authUser = "";
+    protected $_authPass = "";
     protected $_authType = null;
     protected $_server;
+    protected $_queryString;
+    protected $_notes;
 
     // additional items
     protected $_documentRoot;
@@ -328,6 +332,46 @@ class Request {
         return $this->_documentRoot;
     }
 
+    public function setAuthDigest($authDigest)
+    {
+        $this->_authDigest = $authDigest;
+    }
+
+    public function getAuthDigest()
+    {
+        return $this->_authDigest;
+    }
+
+    public function setAuthPass($authPass)
+    {
+        $this->_authPass = $authPass;
+    }
+
+    public function getAuthPass()
+    {
+        return $this->_authPass;
+    }
+
+    public function setAuthUser($authUser)
+    {
+        $this->_authUser = $authUser;
+    }
+
+    public function getAuthUser()
+    {
+        return $this->_authUser;
+    }
+
+    public function setQueryString($queryString)
+    {
+        $this->_queryString = $queryString;
+    }
+
+    public function getQueryString()
+    {
+        return $this->_queryString;
+    }
+
 //    public function setMainConfig($mainConfig)
 //    {
 //        $this->_mainConfig = $mainConfig;
@@ -337,5 +381,30 @@ class Request {
 //    {
 //        return $this->_mainConfig;
 //    }
+
+//    public function mergeNotes(\HTRouter\Request $subrequest) {
+//        $this->_notes = array_merge($this->_notes, $subrequest->getNotes());
+//    }
+//    public function mergeHeadersOut(\HTRouter\Request $subrequest) {
+//        $this->_outHeaders = array_merge($this->_outHeaders, $subrequest->getOutHeaders());
+//    }
+//    public function mergeErrHeadersOut(\HTRouter\Request $subrequest) {
+//        // @TODO FILL THIS
+//    }
+//
+//    public function setNotes($notes)
+//    {
+//        $this->_notes = $notes;
+//    }
+//
+//    public function getNotes()
+//    {
+//        return $this->_notes;
+//    }
+
+    public function merge(\HTRouter\Request $subRequest) {
+        $tmp = $subRequest->getFilename();
+        $this->setFilename($tmp);
+    }
 
 }
