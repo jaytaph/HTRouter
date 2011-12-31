@@ -9,9 +9,9 @@ namespace HTRouter\Module\Auth;
 
 class Basic extends \HTRouter\AuthModule {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateBasicUser"));
@@ -23,14 +23,14 @@ class Basic extends \HTRouter\AuthModule {
         }
 
         // Check realm
-        if (! $request->config->getAuthName()) {
+        if (! $this->getConfig()->getAuthName()) {
             $request->logError(\HTRouter\Request::ERRORLEVEL_ERROR, "need authname: ".$request->getUri());
             return \HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR;
         }
 
         $ret = $this->_getBasicAuth($request);
         if (! is_array($ret)) {
-            $request->appendOutHeaders("WWW-Authenticate", "Basic realm=\"".$request->config->getAuthName()."\"");
+            $request->appendOutHeaders("WWW-Authenticate", "Basic realm=\"".$this->getConfig()->getAuthName()."\"");
             return $ret;
         }
         list($user, $pass) = $ret;
@@ -52,7 +52,7 @@ class Basic extends \HTRouter\AuthModule {
         // Set the authenticated user inside the request
         if ($result != \HTRouter\AuthModule::AUTH_GRANTED) {
 
-            if ($request->config->getAuthzUserAuthoritative() && $result != \HTRouter\AuthModule::AUTH_DENIED) {
+            if ($this->getConfig()->getAuthzUserAuthoritative() && $result != \HTRouter\AuthModule::AUTH_DENIED) {
                 // Not authoritative so we decline and goto the next checker
                 return \HTRouter::STATUS_DECLINED;
             }
@@ -71,7 +71,7 @@ class Basic extends \HTRouter\AuthModule {
 
             // If we need to send a 403, do it
             if ($retval == \HTRouter::STATUS_HTTP_UNAUTHORIZED) {
-                $request->appendOutHeaders("WWW-Authenticate", "Basic realm=\"".$request->config->getAuthName()."\"");
+                $request->appendOutHeaders("WWW-Authenticate", "Basic realm=\"".$this->getConfig()->getAuthName()."\"");
             }
 
             return $result;

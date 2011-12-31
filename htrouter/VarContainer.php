@@ -10,6 +10,10 @@ class VarContainer implements \IteratorAggregate {
     function __construct() {
     }
 
+    /**
+     * Return array iterator of all variables inside this container
+     * @return \ArrayIterator
+     */
     function getIterator() {
         return new \ArrayIterator($this->_vars);
     }
@@ -17,6 +21,7 @@ class VarContainer implements \IteratorAggregate {
     // the get* functions allows a parameter. This is the return value when the actual item is not found.
     function __call($name, $arguments)
     {
+        // called we do a $container->appendFoo();
         if (substr($name, 0, 6) == "append") {
             // This will append to a new or existing array.
             $name = strtolower(substr($name, 6));
@@ -26,6 +31,8 @@ class VarContainer implements \IteratorAggregate {
             $this->_vars[$name][] = $arguments[0];
             return null;
         }
+
+        // called we do a $container->setFoo();
         if (substr($name, 0, 3) == "set") {
             // Set variable
             $name = strtolower(substr($name, 3));
@@ -33,6 +40,7 @@ class VarContainer implements \IteratorAggregate {
             return null;
         }
 
+        // called we do a $container->getFoo();
         if (substr($name, 0, 3) == "get") {
             // Get variable
             $name = strtolower(substr($name, 3));
@@ -45,6 +53,7 @@ class VarContainer implements \IteratorAggregate {
             return $this->_vars[$name];
         }
 
+        // called we do a $container->unsetFoo();
         if (substr($name, 0, 5) == "unset") {
             // Unset variable
             $name = strtolower(substr($name, 5));

@@ -8,9 +8,9 @@ namespace HTRouter\Module\Authz;
 
 class User extends \HTRouter\AuthzModule {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register directives
         $router->registerDirective($this, "AuthzUserAuthoritative");
@@ -22,7 +22,7 @@ class User extends \HTRouter\AuthzModule {
     public function AuthzUserAuthoritativeDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => "on", "off" => "off"));
-        $request->config->setAuthzUserAuthoritative($value);
+        $this->getConfig()->setAuthzUserAuthoritative($value);
     }
 
     public function checkUserAccess(\HTRouter\Request $request) {

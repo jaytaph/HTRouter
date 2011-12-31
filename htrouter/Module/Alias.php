@@ -8,9 +8,9 @@ use HTRouter\Module;
 
 class Alias extends Module {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register directives
         $router->registerDirective($this, "Redirect");
@@ -23,7 +23,7 @@ class Alias extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
 
         // Set default values
-        $router->getRequest()->config->setRedirects(array());
+        $container->getConfig()->setRedirects(array());
     }
 
     public function redirectDirective(\HTRouter\Request $request, $line) {

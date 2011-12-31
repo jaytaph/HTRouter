@@ -8,11 +8,11 @@ use HTRouter\Module;
 
 class Core extends Module {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
-        // Register core directives
+        // Register directives
         $router->registerDirective($this, "require");
         $router->registerDirective($this, "satisfy");
         $router->registerDirective($this, "<ifmodule");
@@ -25,17 +25,17 @@ class Core extends Module {
 
 
         // Set default values
-        $router->getRequest()->config->setSatisfy("all");
+        $this->getConfig()->setSatisfy("all");
     }
 
     public function requireDirective(\HTRouter\Request $request, $line) {
-        $request->config->appendRequire($line);
+        $this->getConfig()->appendRequire($line);
     }
 
     public function satisfyDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("all" => "all", "any" => "any"));
-        $request->config->setSatisfy($value);
+        $this->getConfig()->setSatisfy($value);
     }
 
     public function gt_ifmoduleDirective(\HTRouter\Request $request, $line) {
@@ -47,31 +47,33 @@ class Core extends Module {
         $module = str_replace(">", "", $line);
 
         // Check if module exists
-        if (! $this->getRouter()->findModule($module)) {
+        $router = \HTRouter::getInstance();
+        if (! $router->findModule($module)) {
             // Module does not exist, so skip this configuration block
-            $this->getRouter()->skipConfig($request->config->getHTAccessFileResource(), "</IfModule>");
+            $router->skipConfig($this->getConfig()->getHTAccessFileResource(), "</IfModule>");
         } else {
             // Module does exist, read this configuration block
-            $this->getRouter()->parseConfig($request, $request->config->getHTAccessFileResource(), "</IfModule>");
+            $router->parseConfig($this->getConfig()->getHTAccessFileResource(), "</IfModule>");
         }
     }
 
     public function authNameDirective(\HTRouter\Request $request, $line) {
         $line = trim($line);
         $line = trim($line, "\"\'");
-        $request->config->setAuthName($line);
+        $this->getConfig()->setAuthName($line);
     }
 
     public function authTypeDirective(\HTRouter\Request $request, $line) {
         $name = "auth_".strtolower(trim($line));
 
         // @TODO: We should check that we have the correct AUTH_* module loaded
-        $plugin = $this->getRouter()->findModule($name);
+        $router = \HTRouter::getInstance();
+        $plugin = $router->findModule($name);
         if (! $plugin) {
             throw new \UnexpectedValueException("Cannot find $name");
         }
 
-        $request->config->setAuthType($plugin);
+        $this->getConfig()->setAuthType($plugin);
     }
 
 
@@ -111,9 +113,9 @@ class Core extends Module {
         }
 
         // get htaccess name from config or constant
-        $config = $request->getMainConfig();
-        if (isset ($config['global']['htaccessfilename'])) {
-            $htaccessFilename = $config['global']['htaccessfilename'];
+        $config = $this->getRouterConfig("global");
+        if (isset ($config['htaccessfilename'])) {
+            $htaccessFilename = $config['htaccessfilename'];
         } else {
             $htaccessFilename = \HTRouter::HTACCESS_FILE;
         }
@@ -146,7 +148,7 @@ class Core extends Module {
                 $new_config = $this->_readHTAccess($request, $htaccessPath);
 
                 // Merge together with current request
-                $request->config->merge($new_config);
+                $this->getConfig()->merge($new_config);
             }
         }
 
@@ -160,22 +162,28 @@ class Core extends Module {
 
 
     protected function _readHTAccess(\HTRouter\Request $request, $htaccessPath) {
-        // Note the cloning!
-        $new_request = clone $request;
-        $new_request->config = new \HTRouter\VarContainer();
+        // Save current configuration
+        $old_config = $this->getConfig();
+        $this->_container->setConfig(new \HTRouter\VarContainer());
 
         // Read HTACCESS
         $f = fopen($htaccessPath, "r");
-        $new_request->config->setHTAccessFileResource($f);  // temporary saving of the filehandle resource
+        $this->getConfig()->setHTAccessFileResource($f);  // temporary saving of the filehandle resource
 
         // Parse config
-        $this->getRouter()->parseConfig($new_request, $f);
+        $router = \HTRouter::getInstance();
+        $router->parseConfig($f);
 
         // Remove from config and close file
-        $new_request->config->unsetHTAccessFileResource();
+        $this->getConfig()->unsetHTAccessFileResource();
         fclose($f);
 
-        return $new_request->config;
+        // Save new config and restore current configuration
+        $new_config = $this->getConfig();
+        $this->_container->setConfig($old_config);
+
+        // Return new configuration
+        return $new_config;
     }
 
 

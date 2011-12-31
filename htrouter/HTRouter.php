@@ -16,11 +16,8 @@ class HTRouter {
     // All found modules
     protected $_modules = array();
 
-    // The main request
-    protected $_request;
-
-    // Array with main configuration items
-    protected $_mainConfig;
+    // Array with default configuration after initialization of the modules (default .htaccess config)
+    protected $_defaultConfig;
 
     const API_VERSION = "123.45";       // Useless API version
 
@@ -56,28 +53,68 @@ class HTRouter {
     const RUNHOOK_VOID  = 3;      // Run all hooks. Don't care about the status code (there probably isn't any)
 
 
+    // Singleton.
+    private static $_instance = null;
+
     /**
-     * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
-     *
-     * @param null $request request
-     * @param bool $populate Do we need to populate the request or not
+     * @static
+     * @return \HTRouter
      */
-    function __construct($request = null, $populate = true) {
-        // Read configuration
-        $this->_readConfig(__DIR__.'/'.self::CONFIG_FILE);
-
-        // Initialize request
-        if ($request == null) {
-            $this->_request = new \HTRouter\Request($this);
-        } else {
-            $this->_request = $request;
+    public static function getInstance() {
+        if (! self::$_instance) {
+            $class = __CLASS__;
+            self::$_instance = new $class();
         }
-
-        // Populate the request if needed.
-        if ($populate) {
-            $this->_populateInitialRequest($this->getRequest());
-        }
+        return self::$_instance;
     }
+
+    private function __clone() {
+        // Cannot be used due to singleton
+    }
+
+    private function __construct() {
+        // Create DI container
+        $this->_container = new \HTRouter\HTDIContainer();
+
+        // Main router htrouter.ini configuration
+        $this->_container->setRouterConfig($this->_readConfig(__DIR__.'/'.self::CONFIG_FILE));
+
+        // The logger class
+        $this->_container->setLogger(new \HTRouter\Logger($this->_container));
+
+        // Variables that are initialized or read by the modules (from .htaccess)
+        $this->_container->setConfig(new \HTRouter\VarContainer());
+
+        // The actual request
+        $request = new \HTRouter\Request($this->_container);
+        $this->_container->setRequest($request);
+
+        // Populate the request
+        $this->_populateInitialRequest($request);
+    }
+
+//    /**
+//     * Constructs a new router. There should only be one (but i'm not putting this inside a singleton yet)
+//     *
+//     * @param null $request request
+//     * @param bool $populate Do we need to populate the request or not
+//     */
+//    function __construct($request = null, $populate = true) {
+//        // Read configuration
+//        $this->_readConfig(__DIR__.'/'.self::CONFIG_FILE);
+//
+//        // Initialize request
+//        if ($request == null) {
+//            $this->_request = new \HTRouter\Request($this);
+//        } else {
+//            $this->_request = $request;
+//        }
+//
+//        // Populate the request if needed.
+//        if ($populate) {
+//            $this->_populateInitialRequest($this->_getRequest());
+//        }
+//    }
 
     /**
      * This is the main entrypoint that routes everything. The module hooks will take care of finding
@@ -89,7 +126,7 @@ class HTRouter {
 
         // Do actual running
         $status = $this->_run();
-        $this->getRequest()->setStatus($status);
+        $this->_getRequest()->setStatus($status);
 
         // Cleanup
         $this->_fini();
@@ -98,27 +135,27 @@ class HTRouter {
         if (isset($_GET['debug'])) {
             // @TODO: remove this. There is something seriously wrong with me....
             print "<hr>";
-            print "We are done. Status <b>".$this->getRequest()->getStatus()."</b>. ";
+            print "We are done. Status <b>".$this->_getRequest()->getStatus()."</b>. ";
 
-            if ($this->getRequest()->getStatus() == \HTRouter::STATUS_HTTP_OK) {
-                print "The file we need to include is : " . $this->getRequest()->getDocumentRoot().$this->getRequest()->getFilename()."<br>\n";
+            if ($this->_getRequest()->getStatus() == \HTRouter::STATUS_HTTP_OK) {
+                print "The file we need to include is : " . $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename()."<br>\n";
             } else {
-                print "We do not need to include a file but do something else: ".$this->getRequest()->getStatusLine()."<br>\n";
+                print "We do not need to include a file but do something else: ".$this->_getRequest()->getStatusLine()."<br>\n";
                 print "Our outgoing headers: ";
                 print "<pre>";
-                print_r ($this->getRequest()->getOutHeaders());
+                print_r ($this->_getRequest()->getOutHeaders());
             }
 
             print "<h2>Server</h2><pre>";
             print_r ($_SERVER);
 
             print "<h2>Request</h2><pre>";
-            print_r($this->getRequest());
+            print_r($this->_getRequest());
             exit;
         }
 
         // Output
-        $r = $this->getRequest();
+        $r = $this->_getRequest();
         header($r->getProtocol()." ".$r->getStatus()." ".$r->getStatusLine());
         foreach ($r->getOutHeaders() as $k => $v) {
             header("$k: $v");
@@ -131,8 +168,8 @@ class HTRouter {
      *
      * @return HTRouter\Request The request
      */
-    function getRequest() {
-        return $this->_request;
+    protected function _getRequest() {
+        return $this->_container->getRequest();
     }
 
     /**
@@ -163,15 +200,18 @@ class HTRouter {
              * @var $module \HTRouter\Module
              */
             $module = new $class();
-            $module->init($this);
+            $module->init($this, $this->_container);
 
             $this->_modules[] = $module;
         }
 
         // Order the hooks
         ksort($this->_hooks);
-    }
 
+
+        // At this point, the getRequest()->config holds all default values. We store them separately
+        $this->_defaultConfig = $this->_container->getconfig();
+    }
 
     /**
      * Logs error and returns 500 code when status has been declined. If the status is a normal HTTP response,
@@ -184,7 +224,7 @@ class HTRouter {
      */
     protected function _declDie($status, $str, \HTRouter\Request $request) {
         if ($status == self::STATUS_DECLINED) {
-            $request->logError(\HTRouter\Request::ERRORLEVEL_ERROR, "configuration error: $str returns $status");
+            $this->_getLogger()->log(\HTRouter\Logger::ERRORLEVEL_ERROR, "configuration error: $str returns $status");
             return self::STATUS_HTTP_INTERNAL_SERVER_ERROR;
         } else {
             return $status;
@@ -218,7 +258,7 @@ class HTRouter {
                 $class = $module[0];
                 $method = $module[1];
                 print "&bull; Running: ".get_class($class)." => $method <br>\n";
-                $retval = $class->$method($this->getRequest());
+                $retval = $class->$method($this->_getRequest());
 
                 // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
                 if (! is_numeric($retval)) {
@@ -251,7 +291,7 @@ class HTRouter {
      */
     protected function _run() {
         $utils = new \HTRouter\Utils();
-        $r = $this->getRequest();       // just an alias
+        $r = $this->_getRequest();       // just an alias
 
         // If you are looking for proxy stuff. It's not here to simplify things
 
@@ -382,7 +422,6 @@ class HTRouter {
         return self::STATUS_OK;
     }
 
-
     /**
      * Do a location walk to check if we are still OK on the location (i guess)...
      *
@@ -400,7 +439,6 @@ class HTRouter {
     protected function _fini() {
         // Cleanup
     }
-
 
     /**
      * Register a directive, a keyword that can be read from htaccess file
@@ -465,7 +503,6 @@ class HTRouter {
         return $this->_providers[$provider];
     }
 
-
     /**
      * Finds and returns the specified module. Searching can be done on any name that is returned by the
      * Module's getAliases() methods.
@@ -486,7 +523,6 @@ class HTRouter {
         }
         return null;
     }
-
 
     /**
      * Skips lines from the configuration until we find 'terminateLine' (most of the time, a </tag>)
@@ -518,7 +554,6 @@ class HTRouter {
         }
     }
 
-
     /**
      * Parse a complete or partial .htaccess file. When terminateLine is given, it will stop parsing until it finds
      * that particular line. Used when parsing blocks like <ifModule> etc..
@@ -528,7 +563,7 @@ class HTRouter {
      * @param string $terminateLine Additional line to end our reading (instead of EOF)
      * @throws UnexpectedValueException Incorrect resource given
      */
-    function parseConfig(\HTRouter\Request $request, $f, $terminateLine = "") {
+    function parseConfig($f, $terminateLine = "") {
         if (! is_resource($f)) {
             throw new \UnexpectedValueException("Must be a config resource");
         }
@@ -580,10 +615,9 @@ class HTRouter {
             // Call the <keyword>Directive() function inside the corresponding module
             $module = $tmp[0];               // Object
             $method = $tmp[1]."Directive";   // Method
-            $module->$method($request, $match[2]);
+            $module->$method($this->_container->getRequest(), $match[2]);
         }
     }
-
 
     /**
      * Initialize the request with standard values taken from the $_SERVER.
@@ -598,8 +632,7 @@ class HTRouter {
          * the base of writing your own webserver like nanoweb)
          */
 
-        // Set configuration
-        $request->setMainconfig($this->_getMainConfig());
+        $routerConfig = $this->_getRouterConfig();
 
         // By default, we don't have any authentication
         //$request->setAuthType(null);
@@ -615,8 +648,8 @@ class HTRouter {
 
         // @TODO: Find requesting file?
         // NOTE: Must be set before checking findUriOnDisk!
-        if (isset($this->_mainConfig['global']['documentroot'])) {
-            $request->setDocumentRoot($this->_mainConfig['global']['documentroot']);
+        if (isset($routerConfig['global']['documentroot'])) {
+            $request->setDocumentRoot($routerConfig['global']['documentroot']);
         } else {
             $request->setDocumentRoot($_SERVER['DOCUMENT_ROOT']);
         }
@@ -629,9 +662,9 @@ class HTRouter {
         }
 
         // Check if the router has to be removed. Useful when using through Apache
-        if (isset($this->_mainConfig['global']['apacherouterprefix'])) {
-            if (strpos($fn, $this->_mainConfig['global']['apacherouterprefix']) === 0) {
-                $fn = substr($fn, strlen($this->_mainConfig['global']['apacherouterprefix']));
+        if (isset($routerConfig['global']['apacherouterprefix'])) {
+            if (strpos($fn, $routerConfig['global']['apacherouterprefix']) === 0) {
+                $fn = substr($fn, strlen($routerConfig['global']['apacherouterprefix']));
 
                 $fn = $_SERVER['REQUEST_URI'];
             }
@@ -682,8 +715,8 @@ class HTRouter {
         $request->setUri($_SERVER['SCRIPT_NAME']);
 
         // Check if we need to remove our router info
-        if (isset($this->_mainConfig['global']['apacherouterprefix'])) {
-            $routerName = $this->_mainConfig['global']['apacherouterprefix'];
+        if (isset($routerConfig['global']['apacherouterprefix'])) {
+            $routerName = $routerConfig['global']['apacherouterprefix'];
             if ($_SERVER['SCRIPT_NAME'] == $routerName) {
                 // Remove router name
             }
@@ -693,9 +726,8 @@ class HTRouter {
         $this->_runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL);
 
 
-        $request->logError(\HTRouter\Request::ERRORLEVEL_DEBUG, "Populating new request done");
+        $this->_getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Populating new request done");
     }
-
 
     /**
      * Copies a request into a new (sub)request. Also takes care of additional handlers/hooks
@@ -712,7 +744,6 @@ class HTRouter {
         return $new;
     }
 
-
     /**
      * Read INI configuration
      *
@@ -721,8 +752,7 @@ class HTRouter {
      */
     protected function _readConfig($configPath) {
         if (! is_readable($configPath)) return;
-
-        $this->_mainConfig = parse_ini_file($configPath, true);
+        return  parse_ini_file($configPath, true);
     }
 
     /**
@@ -730,7 +760,15 @@ class HTRouter {
      *
      * @return array The configuration
      */
-    protected function _getMainConfig() {
-        return $this->_mainConfig;
+    protected function _getRouterConfig() {
+        return $this->_container->getRouterConfig();
+    }
+
+    /**
+     * Returns the logger
+     * @return mixed
+     */
+    function _getLogger() {
+        return $this->_container->getLogger();
     }
 }

@@ -8,9 +8,9 @@ namespace HTRouter\Module\Auth;
 
 class Digest extends \HTRouter\AuthModule {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateDigestUser"));

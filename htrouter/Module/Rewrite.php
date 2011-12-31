@@ -12,9 +12,9 @@ use HTRouter\Module\Rewrite\Flag;
 
 class Rewrite extends Module {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register directives
         $router->registerDirective($this, "RewriteBase");
@@ -29,17 +29,17 @@ class Rewrite extends Module {
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "uriToFile"), 0);
 
         // Set default values
-        $router->getRequest()->config->setRewriteEngine(false);
+        $this->getConfig()->setRewriteEngine(false);
     }
 
     public function RewriteEngineDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils();
         $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
-        $request->config->setRewriteEngine($value);
+        $this->getConfig()->setRewriteEngine($value);
     }
 
     public function RewriteBaseDirective(\HTRouter\Request $request, $line) {
-        $request->config->setRewriteBase($line);
+        $this->getConfig()->setRewriteBase($line);
     }
 
     /**
@@ -57,14 +57,14 @@ class Rewrite extends Module {
         }
 
         $condition = new Condition($args[0], $args[1], $args[2]);
-        $request->config->appendTempRewriteConditions($condition);
+        $this->getConfig()->appendTempRewriteConditions($condition);
     }
 
     public function RewriteOptionsDirective(\HTRouter\Request $request, $line) {
         if ($line != "inherit") {
             throw new \UnexpectedValueException("RewriteOptions must be 'inherit'");
         }
-        $request->config->setRewriteOptions("inherit");
+        $this->getConfig()->setRewriteOptions("inherit");
     }
 
     public function RewriteRuleDirective(\HTRouter\Request $request, $line) {
@@ -75,13 +75,13 @@ class Rewrite extends Module {
         }
 
         $rule = new Rule($request, $args[0], $args[1], $args[2]);
-        foreach ($request->config->getTempRewriteConditions(array()) as $condition) {
+        foreach ($this->getConfig()->getTempRewriteConditions(array()) as $condition) {
             $rule->addCondition($condition);
         }
-        $request->config->appendRewriteRule($rule);
+        $this->getConfig()->appendRewriteRule($rule);
 
         // Clear the current rewrite conditions
-        $request->config->unsetTempRewriteConditions();
+        $this->getConfig()->unsetTempRewriteConditions();
     }
 
 
@@ -90,7 +90,7 @@ class Rewrite extends Module {
      */
     function fixUp(\HTRouter\Request $request) {
         // [RewriteRules in directory context]
-        if ($request->config->getRewriteEngine() == false) {
+        if ($this->getConfig()->getRewriteEngine() == false) {
             return \HTRouter::STATUS_DECLINED;
         }
 
@@ -105,7 +105,7 @@ class Rewrite extends Module {
 thenext:
 
         // Iterate all the rewrite rules in order!
-        foreach ($request->config->getRewriteRule() as $rule) {
+        foreach ($this->getConfig()->getRewriteRule() as $rule) {
             // Some flag must be parsed prior to checking stuff
             $chained = $rule->hasFlag(Flag::TYPE_CHAIN);
 
@@ -202,12 +202,12 @@ thenext:
         // We set the mimetype last. This means that when we have N mimetype flags, only the last will be set.
         // We do this very late so our request does not get messed up with mimetypes I guess.
 
-        $mimeType = $request->config->getTempMimeType();
+        $mimeType = $this->getConfig()->getTempMimeType();
         if ($mimeType) {
             $request->setContentType($flag->getKey());
         }
 
-        $handler = $request->config->getTempHandler();
+        $handler = $this->getConfig()->getTempHandler();
         if ($handler) {
             throw new \Exception("We cannot set handler");
         }

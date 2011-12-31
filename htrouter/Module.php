@@ -3,29 +3,37 @@
 namespace HTRouter;
 
 abstract class Module  {
-    protected $_router;
+    /**
+     * @var \HTRouter\HTDIContainer
+     */
+    protected $_container;
 
     /**
-     * @param \HTRouter $router
      */
-    public function init(\HTRouter $router)
-    {
-        $this->_router = $router;
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container) {
+        $this->_container = $container;
+    }
+
+    public function getRequest() {
+        return $this->_container->getRequest();
+    }
+
+    public function getRouterConfig() {
+        return $this->_container->getRouterConfig();
     }
 
     /**
-     * @return mixed
+     * @return \VarContainer
      */
-    public function getRouter() {
-        return $this->_router;
+    public function getConfig() {
+        return $this->_container->getConfig();
     }
 
-    /**
-     * @param \HTRouter $router
-     */
-    public function setRouter(\HTRouter $router) {
-        $this->_router = $router;
+
+    public function getLogger() {
+        return $this->_container->getLogger();
     }
+
 
     abstract public function getAliases();
 }

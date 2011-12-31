@@ -9,9 +9,9 @@ use HTRouter\Module;
 class Dir extends Module {
     const DEFAULT_DIRECTORY_INDEX_FILE = "index.html";
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register directives
         $router->registerDirective($this, "DirectoryIndex");
@@ -22,24 +22,24 @@ class Dir extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "dirFixups"), 99);
 
         // Set default values
-        $router->getRequest()->config->setDirectorySlash(true);
+        $this->getConfig()->setDirectorySlash(true);
     }
 
     public function DirectoryIndexDirective(\HTRouter\Request $request, $line) {
         $localUrls = explode(" ", $line);
         foreach ($localUrls as $url) {
-            $request->config->appendDirectoryIndex($url);
+            $this->getConfig()->appendDirectoryIndex($url);
         }
     }
 
     public function DirectorySlashDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
-        $request->config->setDirectorySlash($value);
+        $this->getConfig()->setDirectorySlash($value);
     }
 
     public function FallbackResourceDirective(\HTRouter\Request $request, $line) {
-        $request->config->setFallbackResource($line);
+        $this->getConfig()->setFallbackResource($line);
     }
 
 
@@ -51,7 +51,7 @@ class Dir extends Module {
         // Check if it doesn't end on a slash?
         if (!empty($url) and ($url[strlen($url)-1] != '/')) {
             // We are fixing a directory and we aren't allowed to add a slash. No good.
-            if ($request->config->getDirectorySlash() == false) {
+            if ($this->getConfig()->getDirectorySlash() == false) {
                 return \HTRouter::STATUS_DECLINED;
             }
 
@@ -66,7 +66,7 @@ class Dir extends Module {
         }
 
         // We can safely check and match against our directory index now
-        $names = $request->config->getDirectoryIndex();
+        $names = $this->getConfig()->getDirectoryIndex();
         $names[] = self::DEFAULT_DIRECTORY_INDEX_FILE;        // @TODO: Seriously wrong. This needs to be placed in config?
         foreach ($names as $name) {
             $url = $this->_updateUrl($request->getUri(), $name);
@@ -92,7 +92,7 @@ class Dir extends Module {
             return $this->fixup_dir($request);
         } elseif ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
             // Do fallback
-            $path = $request->config->getFallbackResource();
+            $path = $this->getConfig()->getFallbackResource();
             if ($path == false) {
                 return \HTRouter::STATUS_DECLINED;
             }

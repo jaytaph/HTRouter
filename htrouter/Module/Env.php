@@ -8,9 +8,9 @@ use HTRouter\Module;
 
 class Env extends Module {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register directives
         $router->registerDirective($this, "PassEnv");
@@ -21,16 +21,16 @@ class Env extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
 
         // Set default values
-        $router->getRequest()->config->setPassEnv(array());
-        $router->getRequest()->config->setSetEnv(array());
-        $router->getRequest()->config->setUnsetEnv(array());
+        $this->getConfig()->setPassEnv(array());
+        $this->getConfig()->setSetEnv(array());
+        $this->getConfig()->setUnsetEnv(array());
     }
 
     public function PassEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
             $env = trim($env);
-            $request->config->appendPassEnv($env);
+            $this->getConfig()->appendPassEnv($env);
         }
     }
 
@@ -39,32 +39,32 @@ class Env extends Module {
         list($key, $val) = explode(" ", $line, 2);
         $key = trim($key);
         $val = trim($val);
-        $request->config->appendSetEnv(array($key, $val));
+        $this->getConfig()->appendSetEnv(array($key, $val));
     }
 
     public function UnsetEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
-            $request->config->appendUnsetEnv($env);
+            $this->getConfig()->appendUnsetEnv($env);
         }
     }
 
     public function envFixup(\HTRouter\Request $request) {
         // Passthrough
-        foreach ($request->config->getPassEnv() as $env) {
+        foreach ($this->getConfig()->getPassEnv() as $env) {
             if (isset($_ENV[$env])) {
-                $request->appendEnvironment($env, $_ENV[$env]);
+                $this->getConfig()->appendEnvironment($env, $_ENV[$env]);
             }
         }
 
         // Set Env
-        foreach ($request->config->getSetEnv() as $env) {
-            $request->appendEnvironment($env[0], $env[1]);
+        foreach ($this->getConfig()->getSetEnv() as $env) {
+            $this->getConfig()->appendEnvironment($env[0], $env[1]);
         }
 
         // Unset Env
-        foreach ($request->config->getUnsetEnv() as $env) {
-            $request->removeEnvironment($env);
+        foreach ($this->getConfig()->getUnsetEnv() as $env) {
+            $this->getConfig()->removeEnvironment($env);
         }
 
         // All done. Proceed to next module

@@ -5,7 +5,7 @@
 [X] Also emulate a request_rec so things will function more smoothly and concise with apache
 [ ] Trimming should be done by config parser, not the actual modules
 [X] Need to order phases correctly: auth comes before fixup! http://httpd.apache.org/docs/2.2/mod/mod_rewrite.html#rewritecond
-[ ] Move logging and initialization into separate class
+[X] Move logging and initialization into separate class
 
 Maybe:
 [ ] Have a generic htrouter.yml that can be parsed with all kind of info: generic flags, documentroot etc?

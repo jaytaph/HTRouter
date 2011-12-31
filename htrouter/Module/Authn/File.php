@@ -11,9 +11,9 @@ namespace HTRouter\Module\Authn;
 
 class File Extends \HTRouter\AuthnModule {
 
-    public function init(\HTRouter $router)
+    public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
-        parent::init($router);
+        parent::init($router, $container);
 
         // Register directives
         $router->registerDirective($this, "AuthUserFile");
@@ -27,7 +27,7 @@ class File Extends \HTRouter\AuthnModule {
             throw new \RuntimeException("Cannot read authfile: $line");
         }
 
-        $request->config->setAuthUserFile($line);
+        $this->getConfig()->setAuthUserFile($line);
     }
 
 
@@ -39,7 +39,7 @@ class File Extends \HTRouter\AuthnModule {
         $utils = new \HTRouter\Utils;
 
         // Read htpasswd file line by line
-        $htpasswdFile = $request->config->getAuthUserFile();
+        $htpasswdFile = $this->getConfig()->getAuthUserFile();
         foreach (file($htpasswdFile) as $line) {
 
             // Trim line and parse user/pass
