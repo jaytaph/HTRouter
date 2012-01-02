@@ -69,7 +69,7 @@ class Request {
         return $this->_args;
     }
 
-    public function setAuthType(\HTRouter\AuthModule $authType = null)
+    public function setAuthType($authType)
     {
         $this->_authType = $authType;
     }
