@@ -7,6 +7,8 @@ namespace HTRouter\Module;
 use HTRouter\Module;
 
 class Core extends Module {
+    // Cached htaccess files. In case we need to read/parse htaccess multiple times
+    protected $_cachedHTAccess = array();
 
     public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
@@ -174,8 +176,14 @@ class Core extends Module {
          *
          * So we can do a simple iteration without worrying about stuff. Easier to reverse the process if needed.
          */
-        $dirs = array();
-        $path = explode("/", dirname($fn));
+        if ($fn[strlen($fn)-1] == '/') {
+            // THis is a "directory" (ie: /dir/, so filename is the dirname)
+            $dirname = $fn;
+        } else {
+            // A file, so get the dirname
+            $dirname = dirname($fn);
+        }
+        $path = explode("/", $dirname);
         if (empty($path[count($path)-1])) array_pop($path);
         while (count($path) > 0) {
             $dirs[] = $request->getDocumentRoot() . join("/", $path);
@@ -207,6 +215,11 @@ class Core extends Module {
 
 
     protected function _readHTAccess(\HTRouter\Request $request, $htaccessPath) {
+        // Check if the htaccess exists inside the cache, if so, return that one.
+        if (isset($this->_cachedHTAccess[$htaccessPath])) {
+            return $this->_cachedHTAccess[$htaccessPath];
+        }
+
         // Save current configuration
         $old_config = $this->getConfig();
         $this->_container->setConfig(new \HTRouter\VarContainer());
@@ -226,6 +239,9 @@ class Core extends Module {
         // Save new config and restore current configuration
         $new_config = $this->getConfig();
         $this->_container->setConfig($old_config);
+
+        // Store this htaccess configuration inside our cache
+        $this->_cachedHTAccess[$htaccessPath] = $new_config;
 
         // Return new configuration
         return $new_config;
