@@ -34,6 +34,9 @@ abstract class Module  {
         return $this->_container->getLogger();
     }
 
+    public function getRouter() {
+        return $this->_container->getRouter();
+    }
 
     abstract public function getAliases();
 }

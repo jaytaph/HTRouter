@@ -71,8 +71,11 @@ class VarContainer implements \IteratorAggregate {
      * @param VarContainer $container
      */
     function merge(\HTRouter\VarContainer $container) {
-//        $this->_vars = $this->_vars + iterator_to_array($container);
         foreach ($container as $k => $v) {
+            if (is_array($v)) {
+                if (! isset($this->_vars[$k])) $this->_vars[$k] = array();
+                $this->_vars[$k] = array_merge($this->_vars[$k], $v);
+            }
             if (! isset($this->_vars[$k])) {
                 // Not yet set. Set it.
                 $this->_vars[$k] = $v;

@@ -219,17 +219,7 @@ class Utils {
     }
 
     function findUriOnDisk(\HTRouter\Request $request, $url) {
-        // tries to match the url onto a file on disk. If possible
-        $url = parse_url($url);
-
-        $docroot = $request->getDocumentRoot();
-
-        // Strip double slashes if needed
-        if ($docroot[strlen($docroot)-1] == "/" && $url['path'][0] == "/") {
-            $docroot = substr($docroot, -1);
-        }
-        $path = $docroot . $url['path'];
-        return $path;
+        return $request->getUri();
     }
 
     const URI_FILETYPE_MISSING = 0;
@@ -244,7 +234,9 @@ class Utils {
      * @return int
      */
     function findUriFileType(\HTRouter\Request $request, $url) {
-        $path = $this->findUriOnDisk($request, $url);
+        $filename = $this->findUriOnDisk($request, $url);
+        $filename = $request->getDocumentRoot() . $filename;
+
         if (! is_readable($path)) return self::URI_FILETYPE_MISSING;
         if (is_dir($path)) return self::URI_FILETYPE_DIR;
         if (is_file($path)) return self::URI_FILETYPE_FILE;
@@ -359,6 +351,11 @@ no_emit:
         }
 
         $path =  join("/", $newDirs);
+
+        // Hack to add last slash if needed.
+        if ($uri[strlen($uri)-1] == '/') {
+            $path .= '/';
+        }
         return $path;
     }
 

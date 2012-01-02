@@ -26,5 +26,4 @@ function htrouter_autoloader($class) {
             include_once($class);
         }
     }
-
 }

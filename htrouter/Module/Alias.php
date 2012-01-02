@@ -33,7 +33,8 @@ class Alias extends Module {
         $redirect->http_status = 302;   // temporary status by default
 
         // parse argument list
-        $args = explode(" ", $line);
+        // @TODO better argument splitting!
+        $args = preg_split("/\s+/", $line);
         if (count($args) == 3) {
             // We have 3 arguments, which means the first argument is the 'status'
             $redirect->http_status = 0;
@@ -74,10 +75,11 @@ class Alias extends Module {
         }
 
         // Add to the list
-        $request->config->appendRedirects($redirect);
+        $this->getConfig()->appendRedirects($redirect);
     }
 
     public function redirectMatchDirective(\HTRouter\Request $request, $line) {
+        // @TODO: Fill this
     }
 
     public function redirectPermanentDirective(\HTRouter\Request $request, $line) {
@@ -102,7 +104,12 @@ class Alias extends Module {
             // @TODO: Check if this is OK?
             $pos = strpos($request->getUri(), $redirect->urlpath);
             if ($pos === 0) {
-                $request->appendOutHeaders("Location", $redirect->url);
+                $url = $redirect->url . substr($request->getUri(), strlen($redirect->urlpath));
+                $qs = $request->getQueryString();
+                if (! empty($qs)) {
+                    $url .= '?' . $qs;
+                }
+                $request->appendOutHeaders("Location", $url);
                 return $redirect->http_status;
             }
         }

@@ -42,8 +42,51 @@ class Dir extends Module {
         $this->getConfig()->setFallbackResource($line);
     }
 
+    protected function _fixup_dflt(\HTRouter\Request $request) {
+        // Do fallback
+        $path = $this->getConfig()->getFallbackResource();
+        if ($path == false) {
+            return \HTRouter::STATUS_DECLINED;
+        }
 
-    public function fixup_dir(\HTRouter\Request $request) {
+        $url = $this->_updateUrl($request->getUri(), $path);
+
+        // In case a subrequest throws an error
+        $error_notfound = false;
+
+        $subContainer = $this->getRouter()->prepareContainerForSubRequest($url);
+        $processor = new \HTRouter\Processor($subContainer);
+        $status = $processor->processRequest();
+        $subrequest = $subContainer->getRequest();
+        $subrequest->setStatus($status);
+
+        if (is_file($subrequest->getDocumentRoot() . $subrequest->getFilename())) {
+            $this->_container->setRequest($subrequest);
+            return \HTRouter::STATUS_OK;
+        }
+
+        if ($subrequest->getStatus() >= 300 && $subrequest->getStatus() < 400) {
+            $this->_container->setRequest($subrequest);
+            return $subrequest->getStatus();
+        }
+
+        if ($subrequest->getStatus() != \HTRouter::STATUS_HTTP_NOT_FOUND &&
+            $subrequest->getStatus() != \HTRouter::STATUS_HTTP_OK) {
+            $error_notfound = $subrequest->getStatus();
+        }
+
+        // "error_notfound" is set? return error_notfound
+        if ($error_notfound) {
+            return $error_notfound;
+        }
+
+        // Nothing to be done. Proceed to next module
+        return \HTRouter::STATUS_DECLINED;
+    }
+
+
+
+    protected function _fixup_dir(\HTRouter\Request $request) {
         $utils = new \HTRouter\Utils;
 
         $url = $request->getUri();
@@ -61,7 +104,7 @@ class Dir extends Module {
             $url = $utils->unparse_url($url);
 
             // Redirect permanently new slashed url ( http://example.org/dir => http://example.org/dir/ )
-            $request->setUri($url);
+            $request->appendOutHeaders("Location", $url);
             return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
         }
 
@@ -74,16 +117,19 @@ class Dir extends Module {
         foreach ($names as $name) {
             $url = $this->_updateUrl($request->getUri(), $name);
 
-            $router = \HTRouter::getInstance();
-            $subrequest = $router->subRequestLookupUri($url, $request);
+            $subContainer = $this->getRouter()->prepareContainerForSubRequest($url);
+            $processor = new \HTRouter\Processor($subContainer);
+            $status = $processor->processRequest();
+            $subrequest = $subContainer->getRequest();
+            $subrequest->setStatus($status);
 
-            if (is_file($subrequest->getFilename())) {
-                $request->merge($subrequest);
+            if (is_file($subrequest->getDocumentRoot() . $subrequest->getFilename())) {
+                $this->_container->setRequest($subrequest);
                 return \HTRouter::STATUS_OK;
             }
 
             if ($subrequest->getStatus() >= 300 && $subrequest->getStatus() < 400) {
-                $request->merge($subrequest);
+                $this->_container->setRequest($subrequest);
                 return $subrequest->getStatus();
             }
 
@@ -103,31 +149,14 @@ class Dir extends Module {
     }
 
     public function dirFixups(\HTRouter\Request $request) {
-        $utils = new \HTRouter\Utils;
+        $filename = $request->getFilename();
 
-        $url = $request->getUri();
-        $type = $utils->findUriFileType($request, $url);
-
-        if ($type == \HTRouter\Utils::URI_FILETYPE_DIR) {
-            return $this->fixup_dir($request);
-        } elseif ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
-            // Do fallback
-            $path = $this->getConfig()->getFallbackResource();
-            if ($path == false) {
-                return \HTRouter::STATUS_DECLINED;
-            }
-            $url = $this->_updateUrl($request->getUri(), $path);
-
-            $type = $utils->findUriFileType($request, $url);
-            if ($type == \HTRouter\Utils::URI_FILETYPE_MISSING) {
-                $request->appendOutHeaders("Location", $url);
-                return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
-            }
-        } else {
-            // We skip alternate handling (like /server-status etc)
+        if (empty($filename) || is_dir($request->getDocumentRoot() . $filename)) {
+            return $this->_fixup_dir($request);
+        } elseif (! empty($filename) && ! file_exists($request->getDocumentRoot() . $filename)) { // @TODO: This must be different FILE_NOT_EXIST
+            return $this->_fixup_dflt($request);
         }
 
-        // It's possible an existing file. We don't need to do any translations to it
         return \HTRouter::STATUS_DECLINED;
     }
 

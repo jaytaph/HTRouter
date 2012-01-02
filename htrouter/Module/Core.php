@@ -20,8 +20,9 @@ class Core extends Module {
         $router->registerDirective($this, "AuthType");
 
         // Register hooks
-        $router->registerHook(\HTRouter::HOOK_MAP_TO_STORAGE, array($this, "coreMapToStorage"), 100); // Really last!
+        $router->registerHook(\HTRouter::HOOK_MAP_TO_STORAGE, array($this, "coreMapToStorage"), 100);  // Really last!
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "coreTranslateName"), 100); // Really last!
+        $router->registerHook(\HTRouter::HOOK_HANDLER, array($this, "coreHandler"), 100);              // Really last!
 
 
         // Set default values
@@ -77,6 +78,35 @@ class Core extends Module {
     }
 
 
+    function coreHandler(\HTRouter\Request $request) {
+        // Since we don't actually use handlers, this just checks to see if filename is an
+        // actual file. If not, we create a 404.
+
+        // Check if the status has been set correctly. If so, don't modify our status
+        $status = $request->getStatus();
+        if ($status != \HTrouter::STATUS_HTTP_OK) {
+            return \HTRouter::STATUS_DECLINED;
+        }
+
+        // From this point, we know that the filename is the one we need. So we can check
+        // for existence.
+        $path = $request->getDocumentRoot() . $request->getFilename();
+
+        if (is_dir($path)) {
+            // Is it a directory. We are not allowed to view it!
+            $request->setStatus(\HTROuter::STATUS_HTTP_FORBIDDEN);
+            return \HTROuter::STATUS_OK;
+        }
+
+        if (! is_readable($path)) {
+            // Is the file not viewable or existing? Not found!
+            $request->setStatus(\HTROuter::STATUS_HTTP_NOT_FOUND);
+            return \HTROuter::STATUS_OK;
+        }
+
+        // Next handler
+        return \HTROuter::STATUS_DECLINED;
+    }
 
     function coreTranslateName(\HTRouter\Request $request) {
         $uri = $request->getUri();
@@ -121,6 +151,9 @@ class Core extends Module {
         // No filename found to start from?
         $fn = $request->getFilename();
         if (empty($fn)) {
+            $utils = new \HTrouter\Utils();
+            $path = $utils->findUriOnDisk($request, $request->getUri());
+            $request->setFilename($path);
             return \HTRouter::STATUS_OK;
         }
 

@@ -4,9 +4,23 @@ namespace HTRouter;
 
 class HTDIContainer extends \DIContainer {
 
+    function setRouter(\HTRouter $router) {
+        $this->router = $router;
+    }
+
+    /**
+     * @return \HTRouter
+     */
+    function getRouter() {
+        return $this->router;
+    }
+
     function setRequest(\HTRouter\Request $request) {
         $this->request = $request;
     }
+    /**
+     * @return \HTRouter\Request
+     */
     function getRequest() {
         return $this->request;
     }

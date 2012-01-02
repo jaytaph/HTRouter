@@ -6,74 +6,24 @@ namespace HTRouter;
  * This is a sortakinda simulation of Apache's request_req structure
  */
 class Request {
+    protected $_mainRequest;
+
     /**
-     * @var null|HTRouter\Request The parent request if this request is a subRequest
      */
-    protected $_parentRequest = null;
+    function __construct($mainRequest = false) {
+        $this->_mainRequest = $mainRequest;
+    }
 
     /**
-     * @var \HTRouter\VarContainer Configuration storage for directive and modules to set|get CONFIG items only!
-     */
-    public $config;
-
-
-    /**
-     * Create new request, with a link to the router, and if needed, as a subRequest for another request.
+     * This is a main or subrequest. Important in case of processing the request. Not everything should be run
+     * from a subrequest for instance. We don't link subRequests though like Apache does. There is no immediate
+     * reason for this, and it would only add complexity.
      *
-     * @param \HTRouter $router
-     * @param null $parentRequest The request for which this request is a subRequest for, or null when it's the main request.
+     * @param $mainRequest
      */
-    function __construct($parentRequest = null) {
-        // Set parent request, if this request is a sub-request
-        $this->_parentRequest = $parentRequest;
-
-        $this->config = new \HTRouter\VarContainer();
+    function setMainRequest($mainRequest) {
+        $this->_mainRequest = ($mainRequest === true);
     }
-
-
-    /**
-     * Returns true when this request is the main request (first request, not a subRequest)
-     * @return bool
-     */
-    function isMainRequest() {
-        return ($this->_parentRequest == null);
-    }
-
-    /**
-     * Returns true when this request is NOT the main request
-     *
-     * @return bool
-     */
-    function isSubRequest() {
-        return (! $this->isMainRequest());
-    }
-
-    /**
-     * Returns the main request, independent if this request is a subRequest or not.
-     * @return Request
-     */
-    function getMainRequest() {
-        $req = $this;
-
-        // Goto start of the chain (ie the first request)
-        while ($req->getParentRequest() != null) {
-            $req = $req->getParentRequest();
-        }
-
-        return $req;
-    }
-
-    /**
-     * Returns the parent request, or NULL when it's the main request
-     * @return null
-     */
-    function getParentRequest() {
-        if ($this->_parentRequest) {
-            return $this->_parentRequest;
-        }
-        return null;
-    }
-
 
     /**********
      * THE METHODS BELOW ARE TAKEN FROM REQUEST_REC
@@ -119,15 +69,15 @@ class Request {
         return $this->_args;
     }
 
-//    public function setAuthType(\HTRouter\AuthModule $authType = null)
-//    {
-//        $this->_authType = $authType;
-//    }
+    public function setAuthType(\HTRouter\AuthModule $authType = null)
+    {
+        $this->_authType = $authType;
+    }
 
     // Module that authenticates: Basic | Digest
     public function getAuthType()
     {
-        return $this->config->getAuthType();
+        return $this->_authType;
     }
 
     public function setContentEncoding($contentEncoding)
@@ -372,39 +322,8 @@ class Request {
         return $this->_queryString;
     }
 
-//    public function setMainConfig($mainConfig)
-//    {
-//        $this->_mainConfig = $mainConfig;
-//    }
-//
-//    public function getMainConfig()
-//    {
-//        return $this->_mainConfig;
-//    }
-
-//    public function mergeNotes(\HTRouter\Request $subrequest) {
-//        $this->_notes = array_merge($this->_notes, $subrequest->getNotes());
-//    }
-//    public function mergeHeadersOut(\HTRouter\Request $subrequest) {
-//        $this->_outHeaders = array_merge($this->_outHeaders, $subrequest->getOutHeaders());
-//    }
-//    public function mergeErrHeadersOut(\HTRouter\Request $subrequest) {
-//        // @TODO FILL THIS
-//    }
-//
-//    public function setNotes($notes)
-//    {
-//        $this->_notes = $notes;
-//    }
-//
-//    public function getNotes()
-//    {
-//        return $this->_notes;
-//    }
-
-    public function merge(\HTRouter\Request $subRequest) {
-        $tmp = $subRequest->getFilename();
-        $this->setFilename($tmp);
+    public function isMainRequest() {
+        return $this->_mainRequest;
     }
 
 }

@@ -18,7 +18,7 @@ class Basic extends \HTRouter\AuthModule {
     }
 
     public function authenticateBasicUser(\HTRouter\Request $request) {
-        if ($request->getAuthType()->getName() != "Basic") {
+        if ($request->getAuthType() != "Basic") {
             return \HTRouter::STATUS_DECLINED;
         }
 
