@@ -18,9 +18,13 @@ class Basic extends \HTRouter\AuthModule {
     }
 
     public function authenticateBasicUser(\HTRouter\Request $request) {
-        if ($request->getAuthType() != "Basic") {
+        $plugin = $this->_container->getConfig()->getAuthType();
+        if (! $plugin || ! $plugin instanceof \HTRouter\AuthModule || $plugin->getName() != "Basic") {
             return \HTRouter::STATUS_DECLINED;
         }
+
+        // Set our handler type
+        $request->setAuthType($this->getName());
 
         // Check realm
         if (! $this->getConfig()->getAuthName()) {
