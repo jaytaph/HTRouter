@@ -181,7 +181,6 @@ class HTRouter {
                 // Run the callback
                 $class = $module[0];
                 $method = $module[1];
-                print "&bull; Running: ".get_class($class)." => $method <br>\n";
                 $retval = $class->$method($container->getRequest());
 
                 // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
@@ -408,14 +407,6 @@ class HTRouter {
             if (! empty($terminateLine) && strtolower($line) == strtolower($terminateLine)) {
                 break;
             }
-
-            if (! empty($terminateLine)) {
-                print "LINE: <font color=red>".htmlentities($terminateLine)." => ".htmlentities($line)."</font><br>";
-            } else {
-                print "LINE: <font color=green>".htmlentities($line)."</font><br>";
-            }
-
-            // @TODO: Must we strip comments at the end of the file
 
             // @TODO: TRY TO BE A BETTER PARSER
 
