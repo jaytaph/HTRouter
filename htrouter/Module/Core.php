@@ -44,7 +44,7 @@ class Core extends Module {
     public function gt_ifmoduleDirective(\HTRouter\Request $request, $line) {
         $line = trim($line);
         if ($line[strlen($line)-1] != '>') {
-            throw new \UnexpectedValueException("No > found");
+            throw new \InvalidArgumentException("No > found");
         }
 
         $module = str_replace(">", "", $line);
@@ -73,7 +73,7 @@ class Core extends Module {
         $router = \HTRouter::getInstance();
         $plugin = $router->findModule($name);
         if (! $plugin) {
-            throw new \UnexpectedValueException("Cannot find $name");
+            throw new \InvalidArgumentException("Cannot find $name");
         }
 
         $this->getConfig()->setAuthType($plugin);
@@ -202,6 +202,7 @@ class Core extends Module {
 
                 // Merge together with current request
                 $this->getConfig()->merge($new_config);
+//                $this->_container->setConfig($new_config);
             }
         }
 

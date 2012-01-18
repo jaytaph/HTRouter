@@ -104,7 +104,7 @@ class Rule {
 
         // Check for brackets
         if ($flags[0] != '[' && $flags[strlen($flags)-1] != ']') {
-            throw new \UnexpectedValueException("Flags must be bracketed");
+            throw new \InvalidArgumentException("Flags must be bracketed");
         }
 
         // Remove brackets
@@ -201,7 +201,7 @@ class Rule {
                     $this->_flags[] = new Flag(Flag::TYPE_MIMETYPE, $key, $value);
                     break;
                 default :
-                    throw new \UnexpectedValueException("Unknown flag found in rewriterule");
+                    throw new \InvalidArgumentException("Unknown flag found in rewriterule");
                     break;
             }
 

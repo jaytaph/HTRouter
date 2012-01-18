@@ -97,7 +97,7 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
 
     /**
      * @dataProvider parseTestProviderExceptions
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      *
      * @param $test
      * @param $type
@@ -144,7 +144,7 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      */
     function testDoesParseCondPatternThrowsExceptionWhenEmptyFunction() {
         new MockCondition('%{HTTP_HOST}', '', "");
@@ -183,7 +183,7 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
 
 
     /**
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      */
     function testDoesParseFlagsExceptionsWhenNotBracketedFunction() {
         $condition = new MockCondition('%{HTTP_HOST}', '-d', "FOO");
@@ -198,7 +198,7 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
 
     /**
      * @dataProvider parseFlagsProviderExceptions
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      */
     function testDoesParseFlagsExceptionsFunction($flag) {
         $condition = new MockCondition('%{HTTP_HOST}', '-d', $flag);

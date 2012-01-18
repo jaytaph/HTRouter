@@ -52,7 +52,7 @@ class Alias extends Module {
             }
 
             if ($redirect->http_status == 0) {
-                throw new \UnexpectedValueException("redirect does not have correct first argument (of three)");
+                throw new \InvalidArgumentException("redirect does not have correct first argument (of three)");
             }
 
             // Remove "status" from the list. Now we only have 2 arguments!
@@ -62,7 +62,7 @@ class Alias extends Module {
         // Check the url path
         $redirect->urlpath = $args[0];
         if ($redirect->urlpath[0] != '/') {
-            throw new \UnexpectedValueException("URL path needs to be an absolute path");
+            throw new \InvalidArgumentException("URL path needs to be an absolute path");
         }
 
         // Check the url (if available)
@@ -70,7 +70,7 @@ class Alias extends Module {
             $redirect->url = $args[1];
             $utils = new \HTRouter\Utils;
             if (! $utils->isUrl($redirect->url)) {
-                throw new \UnexpectedValueException("URL needs to be an actual URL (http://...)");
+                throw new \InvalidArgumentException("URL needs to be an actual URL (http://...)");
             }
         }
 

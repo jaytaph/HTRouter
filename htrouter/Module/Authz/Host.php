@@ -40,7 +40,7 @@ class Host Extends \HTRouter\AuthzModule {
 
     public function allowDirective(\HTRouter\Request $request, $line) {
         if (! preg_match("/^from (.+)$/i", $line, $match)) {
-            throw new \UnexpectedValueException("allow must be followed by a 'from'");
+            throw new \InvalidArgumentException("allow must be followed by a 'from'");
         }
 
         // Convert each item on the line to our custom "entry" object
@@ -51,7 +51,7 @@ class Host Extends \HTRouter\AuthzModule {
 
     public function denyDirective(\HTRouter\Request $request, $line) {
         if (! preg_match("/^from (.+)$/i", $line, $match)) {
-            throw new \UnexpectedValueException("deny must be followed by a 'from'");
+            throw new \InvalidArgumentException("deny must be followed by a 'from'");
         }
 
         // Convert each item on the line to our custom "entry" object

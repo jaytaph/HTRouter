@@ -114,7 +114,7 @@ class Condition {
 
     protected function _parseCondPattern($condPattern) {
         if (empty($condPattern)) {
-            throw new \UnexpectedValueException("CondPattern must not be empty!");
+            throw new \InvalidArgumentException("CondPattern must not be empty!");
         }
 
         // Check if its a negative condition
@@ -171,7 +171,7 @@ class Condition {
 
         // Check for brackets
         if ($flags[0] != '[' && $flags[strlen($flags)-1] != ']') {
-            throw new \UnexpectedValueException("Flags must be bracketed");
+            throw new \InvalidArgumentException("Flags must be bracketed");
         }
 
         // Remove brackets
@@ -194,7 +194,7 @@ class Condition {
                     $this->_flags[] = new Flag(Flag::TYPE_NOVARY, null, null);
                     break;
                 default :
-                    throw new \UnexpectedValueException("Unknown condition flag: $flag");
+                    throw new \InvalidArgumentException("Unknown condition flag: $flag");
                     break;
             }
         }

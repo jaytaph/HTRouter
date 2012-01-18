@@ -81,7 +81,7 @@ class utilsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @expectedException \UnexpectedValueException
+     * @expectedException \InvalidArgumentException
      * @dataProvider matchingIPproviderExceptions
      */
     function testDoescheckMatchingIPExceptionsFunction($src, $dst) {
@@ -133,7 +133,7 @@ class utilsTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      */
     function testDoesfetchDirectiveFlagsExceptionFunction() {
         $this->_utils->fetchDirectiveFlags("foobar", array("on" => "on", "off" => "off"));

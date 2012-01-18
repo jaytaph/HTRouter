@@ -92,14 +92,14 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
     }
 
     /**
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      */
     function testDoesParseFlagsExceptionsWhenNotBracketedFunction() {
         $condition = new Rule($this->_request, '(.*)$', "test.php", "L");
     }
 
     /**
-     * @expectedException UnexpectedValueException
+     * @expectedException InvalidArgumentException
      */
     function testDoesParseFlagsExceptionsWhenNotValidFunction() {
         new Rule($this->_request, '(.*)$', "test.php", "[FOOBAR]");

@@ -64,20 +64,20 @@ class Utils {
      * @param $dst
      * @param $netmask
      * @return bool
-     * @throws UnexpectedValueException
+     * @throws InvalidArgumentException
      */
     protected function _checkMatchingIP_Netmask($src, $dst, $netmask) {
         // Is our netmask in a correct IP format?
         if (ip2long($netmask) === false) {
-            throw new \UnexpectedValueException("'$netmask' does not look like a subnet mask");
+            throw new \InvalidArgumentException("'$netmask' does not look like a subnet mask");
         }
 
         // Are our ips in a correct IP format?
         if (! $this->isValidIP($src)) {
-            throw new \UnexpectedValueException("'$src' does not look like a decent IP");
+            throw new \InvalidArgumentException("'$src' does not look like a decent IP");
         }
         if (! $this->isValidIP($dst)) {
-            throw new \UnexpectedValueException("'$dst' does not look like a decent IP");
+            throw new \InvalidArgumentException("'$dst' does not look like a decent IP");
         }
 
 
@@ -119,18 +119,18 @@ class Utils {
      * @param $dst
      * @param $cidr
      * @return bool
-     * @throws UnexpectedValueException
+     * @throws InvalidArgumentException
      */
     protected function _checkMatchingIP_Cidr($src, $dst, $cidr) {
         if (!is_numeric($cidr) and ($cidr <= 0 or $cidr > 32)) {
-            throw new \UnexpectedValueException("'$cidr' does not look like a decent cidr");
+            throw new \InvalidArgumentException("'$cidr' does not look like a decent cidr");
         }
         // Are our ips in a correct IP format?
         if (! $this->isValidIP($src)) {
-            throw new \UnexpectedValueException("'$src' does not look like a decent IP");
+            throw new \InvalidArgumentException("'$src' does not look like a decent IP");
         }
         if (! $this->isValidIP($dst)) {
-            throw new \UnexpectedValueException("'$dst' does not look like a decent IP");
+            throw new \InvalidArgumentException("'$dst' does not look like a decent IP");
         }
 
 
@@ -192,7 +192,7 @@ class Utils {
         $line = strtolower($line);
 
         if (! in_array($line, array_keys($values))) {
-            throw new \UnexpectedValueException("Must be either: ". join(", ", array_keys($values)));
+            throw new \OutOfBoundsException("Must be either: ". join(", ", array_keys($values)));
         }
 
         return $values[$line];
