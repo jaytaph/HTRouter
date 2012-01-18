@@ -48,7 +48,7 @@ class Condition {
     function __construct($testString, $condPattern, $flags) {
         // Set default values
         $this->_testString = $testString;
-        $this->_testStringType = self::TYPE_UNKNOWN;
+        //$this->_testStringType = self::TYPE_UNKNOWN;
 
         $this->_condPattern = $condPattern;
         $this->_condPatternType = self::COND_UNKNOWN;
@@ -59,7 +59,7 @@ class Condition {
         $this->_flags = array();
 
         // Parse string and condition (throws error on fault)
-        $this->_parseTestString($testString);
+        //$this->_parseTestString($testString);
         $this->_parseCondPattern($condPattern);
         $this->_parseFlags($flags);
     }
@@ -71,44 +71,48 @@ class Condition {
     }
 
     function getRequest() {
-        if ($this->_rule == null) {
-            throw new \DomainException("This condition is not yet linked to a rule");
-        }
-        return $this->_rule->getRequest();
+        return $this->getRule()->getRequest();
     }
 
     function linkRule(Rule $rule) {
         $this->_rule = $rule;
     }
 
+    function getRule() {
+        if ($this->_rule == null) {
+            throw new \DomainException("This condition is not yet linked to a rule");
+        }
+        return $this->_rule;
+    }
+
     protected function _parseTestString($testString) {
-        if (preg_match('/^\$([0-9])$/', $testString, $matches)) {
-            // Conditional rule backref?
-            $this->_testStringType = self::TYPE_RULE_BACKREF;
-            $this->_testString = $matches[1];
-
-        } elseif (preg_match('/^\%([0-9])$/', $testString, $matches)) {
-            // Conditional rule backref?
-            $this->_testStringType = self::TYPE_COND_BACKREF;
-            $this->_testString = $matches[1];
-
-        } elseif (preg_match('/^\%\{(.+)\}$/', $testString, $matches)) {
-            $variable = strtoupper($matches[1]);        // Include %{}
-
-            if (in_array($variable, $this->_specialTypes)) {
-                $this->_testStringType = self::TYPE_SPECIAL;
-                $this->_testString = strtoupper($testString);
-            }
-            if (in_array($variable, $this->_specialServer)) {
-                $this->_testStringType = self::TYPE_SERVER;
-                $this->_testString = strtoupper($testString);
-            }
-        }
-
-        // Check for OK test string
-        if ($this->_testStringType == self::TYPE_UNKNOWN) {
-            throw new \UnexpectedValueException("Unknown testString in rewriteCond found");
-        }
+//        if (preg_match('/^\$([0-9])$/', $testString, $matches)) {
+//            // Conditional rule backref?
+//            $this->_testStringType = self::TYPE_RULE_BACKREF;
+//            $this->_testString = $matches[1];
+//
+//        } elseif (preg_match('/^\%([0-9])$/', $testString, $matches)) {
+//            // Conditional rule backref?
+//            $this->_testStringType = self::TYPE_COND_BACKREF;
+//            $this->_testString = $matches[1];
+//
+//        } elseif (preg_match('/^\%\{(.+)\}$/', $testString, $matches)) {
+//            $variable = strtoupper($matches[1]);        // Include %{}
+//
+//            if (in_array($variable, $this->_specialTypes)) {
+//                $this->_testStringType = self::TYPE_SPECIAL;
+//                $this->_testString = strtoupper($testString);
+//            }
+//            if (in_array($variable, $this->_specialServer)) {
+//                $this->_testStringType = self::TYPE_SERVER;
+//                $this->_testString = strtoupper($testString);
+//            }
+//        }
+//
+//        // Check for OK test string
+//        if ($this->_testStringType == self::TYPE_UNKNOWN) {
+//            throw new \UnexpectedValueException("Unknown testString in rewriteCond found");
+//        }
     }
 
 
@@ -246,9 +250,6 @@ class Condition {
         // check our match
         $match = false;
 
-//        // Expand the test string
-//        $expanded = $this->_testStringType;
-
         switch ($this->_testStringType) {
             case self::TYPE_RULE_BACKREF :
                 throw new \DomainException("Rule back references not yet supported!");
@@ -270,11 +271,13 @@ class Condition {
                 // @codeCoverageIgnoreEnd
         }
 
+        // Expand the test string
+        $expanded = $this->getRule()->expandSubstitutions($this->getRequest(), $this->_testString, $this->getRule()->getRuleMatches(), $this->getRule()->getLastConditionMatches());
 
         // Check expanded string against conditional Pattern
         switch ($this->_condPatternType) {
             case self::COND_REGEX :
-                $regex = "/".$this->_condPattern."/";
+                $regex = '|'.$this->_condPattern.'|';  // Don't separate with / since it will be used a path delimiter
 
                 // Case independent if needed
                 if ($this->hasFlag(Flag::TYPE_NOCASE)) {
@@ -334,67 +337,8 @@ class Condition {
             $match = ! $match;
         }
 
+        \HTRouter::getInstance()->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Conditional match of ".(string)$this." : ".($match ? "yes" : "no"));
         return $match;
-    }
-
-
-
-    protected function _expandTestString($string) {
-        $request = $this->getRequest();
-        $router = \HTrouter::getInstance();
-
-        $string = str_replace("%{HTTP_USER_AGENT}", $request->getServerVar("HTTP_USER_AGENT"), $string);
-        $string = str_replace("%{HTTP_REFERER}", $request->getServerVar("HTTP_REFERER"), $string);
-        $string = str_replace("%{HTTP_COOKIE}", $request->getServerVar("HTTP_COOKIE"), $string);
-        $string = str_replace("%{HTTP_FORWARDED}", $request->getServerVar("HTTP_FORWARDED"), $string);
-        $string = str_replace("%{HTTP_HOST}", $request->getServerVar("HTTP_HOST"), $string);
-        $string = str_replace("%{HTTP_PROXY_CONNECTION}", $request->getServerVar("HTTP_PROXY_CONNECTION"), $string);
-        $string = str_replace("%{HTTP_ACCEPT}", $request->getServerVar("HTTP_ACCEPT"), $string);
-
-        $string = str_replace("%{REMOTE_ADDR}", $request->getServerVar("REMOTE_ADDR"), $string);
-        $string = str_replace("%{REMOTE_HOST}", $request->getServerVar("REMOTE_HOST"), $string);
-        $string = str_replace("%{REMOTE_PORT}", $request->getServerVar("REMOTE_PORT"), $string);
-
-        $string = str_replace("%{REMOTE_USER}", $request->getAuthUser(), $string);
-        $string = str_replace("%{REMOTE_IDENT}", "", $string);                                         // We don't support identing!
-        $string = str_replace("%{REQUEST_METHOD}", $request->getMethod(), $string);
-        $string = str_replace("%{SCRIPT_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
-        $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);
-        $string = str_replace("%{QUERY_STRING}", $request->getQueryString(), $string);
-        if ($request->getAuthType()) {
-            // @codeCoverageIgnoreStart
-            $string = str_replace("%{AUTH_TYPE}", $request->getAuthType()->getAuthType(), $string);     // Returns either Basic or Digest
-            // @codeCoverageIgnoreEnd
-        } else {
-            $string = str_replace("%{AUTH_TYPE}", "", $string);
-        }
-
-        $string = str_replace("%{DOCUMENT_ROOT}", $request->getDocumentRoot(), $string);
-        $string = str_replace("%{SERVER_ADMIN}", $request->getServerVar("SERVER_ADMIN"), $string);
-        $string = str_replace("%{SERVER_NAME}", $request->getServerVar("SERVER_NAME"), $string);
-        $string = str_replace("%{SERVER_ADDR}", $request->getServerVar("SERVER_ADDR"), $string);
-        $string = str_replace("%{SERVER_PORT}", $request->getServerVar("SERVER_PORT"), $string);
-        $string = str_replace("%{SERVER_PROTOCOL}", $request->getServerVar("SERVER_PROTOCOL"), $string);
-        $string = str_replace("%{SERVER_SOFTWARE}", $router->getServerSoftware(), $string);
-
-        // Non-deterministic, but it won't change over the course of a request, even if the seconds have changed!
-        $string = str_replace("%{TIME_YEAR}", date("Y"), $string);  // 2011
-        $string = str_replace("%{TIME_MON}", date("m"), $string);   // 01-12
-        $string = str_replace("%{TIME_DAY}", date("d"), $string);   // 01-31
-        $string = str_replace("%{TIME_HOUR}", date("H"), $string);  // 00-23
-        $string = str_replace("%{TIME_MIN}", date("i"), $string);   // 00-59
-        $string = str_replace("%{TIME_SEC}", date("s"), $string);   // 00-59
-        $string = str_replace("%{TIME_WDAY}", date("w"), $string);  // 0-6 (sun-sat)
-        $string = str_replace("%{TIME}", date("YmdHis"), $string);  // %04d%02d%02d%02d%02d%02d
-
-        $string = str_replace("%{API_VERSION}", $router->getServerApi(), $string);
-        $string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);
-        $string = str_replace("%{REQUEST_URI}", $request->getServerVar("REQUEST_URI"), $string);
-        $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
-        $string = str_replace("%{IS_SUBREQ}", $request->isSubRequest() ? "true" : "false", $string);
-        $string = str_replace("%{HTTPS}", $request->isHttps() ? "on" : "off", $string);
-
-        return $string;
     }
 
 }

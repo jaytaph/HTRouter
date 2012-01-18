@@ -79,6 +79,10 @@ class Request {
     }
 
     // Module that authenticates: Basic | Digest
+
+    /**
+     * @return \HTRouter\AuthModule
+     */
     public function getAuthType()
     {
         return $this->_authType;
@@ -366,6 +370,13 @@ class Request {
     public function getHttps()
     {
         return $this->_https;
+    }
+
+    public function getServerVar($var) {
+        if (isset($_SERVER[$var])) {
+            return $_SERVER[$var];
+        }
+        return "";
     }
 
 }

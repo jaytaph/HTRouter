@@ -31,7 +31,6 @@ class VarContainer implements \IteratorAggregate {
         $this->_vars[$name] = $value;
     }
 
-    // Get variable
     /**
      * @param $name
      * @param mixed $default

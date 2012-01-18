@@ -1,6 +1,9 @@
 <?php
 /**
- * Mod_rewrite. This is probably the most important module (and the whole point of the router to begin with)
+ * Mod_rewrite. This is probably the most important module (and the whole point of the router to begin with). Note
+ * however that this module is not writing in same the way the actual mod_rewrite was written. Since performance isn't
+ * an issue, but severely complicates the whole setup, we keep all the rewrites internally inside this function. There
+ * is no internal-redirector or subrequests that are made by this function. Input: url  Output: completely rewritten url
  */
 
 namespace HTRouter\Module;
@@ -50,7 +53,7 @@ class Rewrite extends Module {
      * @param $line
      */
     public function RewriteCondDirective(\HTRouter\Request $request, $line) {
-        $args = explode(" ", $line, 3);
+        $args = preg_split("/\s+/", $line, 3);
         if (count ($args) <= 2) {
             // Add optional flags
             $args[] = "";
@@ -61,8 +64,9 @@ class Rewrite extends Module {
     }
 
     public function RewriteOptionsDirective(\HTRouter\Request $request, $line) {
+        // @TODO: This must be fixed. At this point, everything is always inherited
         if ($line != "inherit") {
-            throw new \UnexpectedValueException("RewriteOptions must be 'inherit'");
+            throw new \InvalidArgumentException("RewriteOptions must be 'inherit'");
         }
         $this->getConfig()->set("RewriteOptions", "inherit");
     }
@@ -109,19 +113,22 @@ thenext:
             // Some flag must be parsed prior to checking stuff
             $chained = $rule->hasFlag(Flag::TYPE_CHAIN);
 
+            /**
+             * @var $rule \HTrouter\Module\Rewrite\Rule
+             */
             // If the rule is chained to the last rule, and that one didn't match. Skip it
-            if ($chained && ! $lastMatch) {
+            if ($rule->hasFlag(Flag::TYPE_CHAIN) && ! $lastMatch) {
                 continue;
             }
 
-            // We need to skip $skip amount of rules
+            // We still need to skip $skip amount of rules
             if ($skip > 0) {
                 $skip--;
                 continue;
             }
 
-            // Skip to the next rule if this rule does not apply to sub requests
-            if ($rule->hasFlag(Flag::TYPE_NOSUBREQS) && $request->isSubRequest()) {
+            // Skip to the next rule if this rule does not apply to sub requests        // @TODO: does this actually work?
+            if ($rule->hasFlag(Flag::TYPE_NOSUBREQS) && ! $request->isMainRequest()) {
                 continue;
             }
 
@@ -150,15 +157,16 @@ thenext:
                             break;
                         case Flag::TYPE_FORBIDDEN :
                             // Forbid it!
-                            $this->getRouter()->createForbiddenResponse();
+                            return \HTRouter::STATUS_HTTP_FORBIDDEN;
                             exit;
                             break;
                         case Flag::TYPE_GONE :
                             // Just gone
-                            $this->getRouter()->createRedirect(410, "Gone");
+                            return \HTRouter::STATUS_HTTP_GONE;
                             break;
                         case Flag::TYPE_HANDLER :
-                            $request->setTempHandler($flag->getKey());
+                            // @TODO: undefined!
+                            throw new \LogicException("Handler setting is not supported as rewriterule flag");
                             break;
                         case Flag::TYPE_LAST :
                             // Do not evaluate any more flags or rules
@@ -172,15 +180,14 @@ thenext:
                             $request->setTempMimeType($flag->getKey());
                             break;
                         case Flag::TYPE_PROXY :
-                            throw new \Exception("PRoxy is not supported as rewriterule flag");
+                            throw new \LogicException("Proxy is not supported as rewriterule flag");
                             break;
                         case Flag::TYPE_PASSTHROUGH :
                             // @TODO: Do passthrough
                             break;
                         case Flag::TYPE_REDIRECT :
-                            $code = $flag->getKey();
-                            if (empty($code)) $code = 302;
-                            $this->getRouter()->createRedirect($code, $utils->getStatusLine($code), $url_path);
+                            $request->appendOutHeaders("Location", $url_path);
+                            return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
                             break;
                         case Flag::TYPE_SKIP :
                             // If the rule matched, skip
@@ -190,7 +197,7 @@ thenext:
                 }
             } // if ($match)
 
-            // Do stuff that needs to be done wether or not we have matched!
+            // Do stuff that needs to be done whether or not we have matched!
 
 
         }
@@ -202,6 +209,7 @@ thenext:
         // We set the mimetype last. This means that when we have N mimetype flags, only the last will be set.
         // We do this very late so our request does not get messed up with mimetypes I guess.
 
+        // @TODO: We don't store our mimetypes inside the configuration (or do we?)
         $mimeType = $this->getConfig()->get("TempMimeType");
         if ($mimeType) {
             $request->setContentType($flag->getKey());
@@ -215,16 +223,37 @@ thenext:
         return \HTRouter::STATUS_DECLINED;
     }
 
-    function uriToFile(\HTRouter\Request $request) {
-        // [RewriteRules in server context]
-        // @TODO: I don't think this one is needed, since we only do .htaccess context
-        return \HTRouter::STATUS_DECLINED;
+
+    function fixUp2(\HTRouter\Request $request) {
+        if ($this->getConfig()->getRewriteEngine() == false) {
+            return \HTRouter::STATUS_DECLINED;
+        }
+
+        // Temp save
+        $oldFilename = $request->getFilename();
+
+        if (! $request->getFilename()) {
+            $request->setFilename($request->getUri());
+        }
+
+        $ruleStatus = $this->applyRewrites();
+        if ($ruleStatus) {
+            if ($ruleStatus == ACTION_STATUS) {
+                $n = $request->getStatus();
+                $request->setStatus(\HTROUTER::STATUS_HTTP_OK);
+                return $n;
+            }
+
+            if (is_absolute_url($request->getFilename())) {
+
+            } else {
+                // Starts with pas
+            }
+        } else {
+            $request->getFilename($oldFilename);
+            return \HTRouter::STATUS_DECLINED;
+        }
     }
-
-
-    /**
-     * Internal functionality
-     */
 
 
     /**

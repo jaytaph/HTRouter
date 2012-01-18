@@ -119,9 +119,8 @@ class HTRouter {
         $status = $processor->processRequest();
         $this->_getRequest()->setStatus($status);
 
-        // All done. But we need to do a final check to see which handler we need to fetch
+        // All done. But we need to do a final check to see which (output)handler we need to fetch (not really used)
         $this->runHook(self::HOOK_HANDLER, self::RUNHOOK_ALL, $this->_container);
-
 
         // Set our $_SERVER variables correctly according to our new request information
         $this->_modifySuperGlobalServerVars();
@@ -229,7 +228,7 @@ class HTRouter {
 
         // Read module directory and initialize all modules
         $it = new RecursiveDirectoryIterator($path);
-        $it = new RecursiveRegexIterator($it, "/^.+\.php$/i");
+        $it = new RecursiveRegexIterator($it, '/^.+\.php$/i');
         $it = new RecursiveIteratorIterator($it);
 
         foreach ($it as $file) {
@@ -355,11 +354,11 @@ class HTRouter {
      *
      * @param resource $f File resource
      * @param string $terminateLine The line on which it needs to terminate
-     * @throws UnexpectedValueException When $f is not a file resoure
+     * @throws InvalidArgumentException When $f is not a file resoure
      */
     function skipConfig($f, $terminateLine) {
         if (! is_resource($f)) {
-            throw new \UnexpectedValueException("Must be a config resource");
+            throw new \InvalidArgumentException("Must be a config resource");
         }
 
         while (! feof($f)) {
@@ -387,11 +386,11 @@ class HTRouter {
      * @param resource $f The file resource
      * @param string $terminateLine Additional line to end our reading (instead of EOF)
      * @internal param \HTRouter\Request $request Request to use during parsing
-     * @throws UnexpectedValueException Incorrect resource given
+     * @throws InvalidArgumentException Incorrect resource given
      */
     function parseConfig($f, $terminateLine = "") {
         if (! is_resource($f)) {
-            throw new \UnexpectedValueException("Must be a config resource");
+            throw new \InvalidArgumentException("Must be a config resource");
         }
 
         while (! feof($f)) {
@@ -608,7 +607,6 @@ class HTRouter {
         return $this->_defaultConfig;
     }
 
-
     /**
      * Return a list of (installed) modules
      *
@@ -622,10 +620,16 @@ class HTRouter {
         return $ret;
     }
 
+//    function prepareContainerForSubRequest($url) {
+//        $subrequest = clone ($this->_container->getRequest());
+//        $subrequest->setMainRequest(false);
+//        $subrequest->setUri($url);
+//        $subrequest->setFilename(null);
+//        return $subrequest;
+//    }
 
     function getEnvironment($key = null) {
         if (! $key) return $this->_env;
-
         return isset($this->_env[$key]) ? $this->_env[$key] : false;
     }
     function setEnvironment($key, $value) {
@@ -658,5 +662,9 @@ class HTRouter {
 
     function getServerApi() {
         return self::API_VERSION;
+    }
+
+    function getLogger() {
+        return $this->_container->getLogger();
     }
 }

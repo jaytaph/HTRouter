@@ -255,20 +255,27 @@ class Rule {
             }
         }
 
-//        print "Conditions for rule <b>".$this."</b> match: ".($match?"yes":"no")."<br>";
+        \HTRouter::getInstance()->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Rule match of ".(string)$this." : ".($match ? "yes" : "no"));
         return $match;
     }
 
 
+    /**
+     * Either returns OK, DECLINED, or a HTTP status code
+     *
+     * @param \HTRouter\Request $request
+     * @return int
+     * @throws \LogicException
+     */
     function rewrite(\HTRouter\Request $request) {
         $utils = new \HTRouter\Utils();
 
         // Check if pattern matches
-        $regex = "/".$this->_pattern."/";
+        $regex = "|".$this->_pattern."|";       // Don't separate with / since it will be used a path delimiter
         if ($this->hasFlag(Flag::TYPE_NOCASE)) {
             $regex .= "i";
         }
-        $match = (preg_match($regex, $request->getUri()) >= 1);
+        $match = (preg_match($regex, $request->getUri(), $matches) >= 1);
         if ($this->_patternNegate) {
             $match = ! $match;
         }
@@ -285,6 +292,8 @@ class Rule {
         }
 
         if ($this->_substitutionType == self::TYPE_SUB) {
+//            $uri = $this->expandSubstitions($this->_substitution, $matches);
+
             $src_url = parse_url($request->getUri());
             $dst_url = parse_url($this->_substitution);
             if (! isset($src_url['host'])) $src_url['host'] = "";
@@ -305,4 +314,103 @@ class Rule {
         // It should be a sub_none or sub type. Must be changed later
         throw new \LogicException("We should not be here!");
     }
+
+    function getRuleMatches() {
+        // Check if pattern matches
+        $regex = "|".$this->_pattern."|";       // Don't separate with / since it will be used a path delimiter
+        if ($this->hasFlag(Flag::TYPE_NOCASE)) {
+            $regex .= "i";
+        }
+        preg_match_all($regex, $this->getRequest()->getUri(), $matches);
+        return $matches;
+    }
+
+
+    /**
+     * @param \HTRouter\Request $request
+     * @param $string
+     * @param null $ruleMatches
+     * @param null $condMatches
+     * @return mixed
+     * @throws \RuntimeException
+     */
+    public function expandSubstitutions(\HTRouter\Request $request, $string, $ruleMatches = null, $condMatches = null) {
+        $router = \HTrouter::getInstance();
+
+        // match rules ($1 etc)
+        if ($ruleMatches !== null) {
+            preg_match_all('|\$([1-9])|', $string, $matches);
+            foreach ($matches[1] as $index) {
+                if (!isset($ruleMatches[$index])) {
+                    throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
+                }
+                $string = str_replace ("\$$index", $ruleMatches[$index], $string);
+            }
+        }
+
+        // match conditions (%1 etc)
+        if ($condMatches !== null) {
+            preg_match_all('|\%([1-9])|', $string, $matches);
+            foreach ($matches[1] as $index) {
+                if (!isset($condMatches[$index])) {
+                    throw new \RuntimeException("Want to match index $index, but nothing found in condition to match");
+                }
+                $string = str_replace ("%$index", $condMatches[$index], $string);
+            }
+        }
+
+        $string = str_replace("%{HTTP_USER_AGENT}", $request->getServerVar("HTTP_USER_AGENT"), $string);
+        $string = str_replace("%{HTTP_REFERER}", $request->getServerVar("HTTP_REFERER"), $string);
+        $string = str_replace("%{HTTP_COOKIE}", $request->getServerVar("HTTP_COOKIE"), $string);
+        $string = str_replace("%{HTTP_FORWARDED}", $request->getServerVar("HTTP_FORWARDED"), $string);
+        $string = str_replace("%{HTTP_HOST}", $request->getServerVar("HTTP_HOST"), $string);
+        $string = str_replace("%{HTTP_PROXY_CONNECTION}", $request->getServerVar("HTTP_PROXY_CONNECTION"), $string);
+        $string = str_replace("%{HTTP_ACCEPT}", $request->getServerVar("HTTP_ACCEPT"), $string);
+
+        $string = str_replace("%{REMOTE_ADDR}", $request->getServerVar("REMOTE_ADDR"), $string);
+        $string = str_replace("%{REMOTE_HOST}", $request->getServerVar("REMOTE_HOST"), $string);
+        $string = str_replace("%{REMOTE_PORT}", $request->getServerVar("REMOTE_PORT"), $string);
+
+        $string = str_replace("%{REMOTE_USER}", $request->getAuthUser(), $string);
+        $string = str_replace("%{REMOTE_IDENT}", "", $string);                                         // We don't support identing!
+        $string = str_replace("%{REQUEST_METHOD}", $request->getMethod(), $string);
+        $string = str_replace("%{SCRIPT_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
+        $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);
+        $string = str_replace("%{QUERY_STRING}", $request->getQueryString(), $string);
+        if ($request->getAuthType()) {
+            // @codeCoverageIgnoreStart
+            $string = str_replace("%{AUTH_TYPE}", $request->getAuthType()->getName(), $string);     // Returns either Basic or Digest
+            // @codeCoverageIgnoreEnd
+        } else {
+            $string = str_replace("%{AUTH_TYPE}", "", $string);
+        }
+
+        $string = str_replace("%{DOCUMENT_ROOT}", $request->getDocumentRoot(), $string);
+        $string = str_replace("%{SERVER_ADMIN}", $request->getServerVar("SERVER_ADMIN"), $string);
+        $string = str_replace("%{SERVER_NAME}", $request->getServerVar("SERVER_NAME"), $string);
+        $string = str_replace("%{SERVER_ADDR}", $request->getServerVar("SERVER_ADDR"), $string);
+        $string = str_replace("%{SERVER_PORT}", $request->getServerVar("SERVER_PORT"), $string);
+        $string = str_replace("%{SERVER_PROTOCOL}", $request->getServerVar("SERVER_PROTOCOL"), $string);
+        $string = str_replace("%{SERVER_SOFTWARE}", $router->getServerSoftware(), $string);
+
+        // Non-deterministic, but it won't change over the course of a request, even if the seconds have changed!
+        $string = str_replace("%{TIME_YEAR}", date("Y"), $string);  // 2011
+        $string = str_replace("%{TIME_MON}", date("m"), $string);   // 01-12
+        $string = str_replace("%{TIME_DAY}", date("d"), $string);   // 01-31
+        $string = str_replace("%{TIME_HOUR}", date("H"), $string);  // 00-23
+        $string = str_replace("%{TIME_MIN}", date("i"), $string);   // 00-59
+        $string = str_replace("%{TIME_SEC}", date("s"), $string);   // 00-59
+        $string = str_replace("%{TIME_WDAY}", date("w"), $string);  // 0-6 (sun-sat)
+        $string = str_replace("%{TIME}", date("YmdHis"), $string);  // %04d%02d%02d%02d%02d%02d
+
+        $string = str_replace("%{API_VERSION}", $router->getServerApi(), $string);
+        $string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);
+        $string = str_replace("%{REQUEST_URI}", $request->getServerVar("REQUEST_URI"), $string);
+        $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
+        $string = str_replace("%{IS_SUBREQ}", $request->isSubRequest() ? "true" : "false", $string);
+        $string = str_replace("%{HTTPS}", $request->isHttps() ? "on" : "off", $string);
+
+        return $string;
+    }
+
 }
