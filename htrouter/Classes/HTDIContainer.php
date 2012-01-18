@@ -3,6 +3,11 @@
 namespace HTRouter;
 
 class HTDIContainer extends \DIContainer {
+    protected $router;
+    protected $request;
+    protected $logger;
+    protected $config;
+    protected $routerConfig;
 
     function setRouter(\HTRouter $router) {
         $this->router = $router;
@@ -49,6 +54,10 @@ class HTDIContainer extends \DIContainer {
     function setConfig(\HTRouter\VarContainer $config) {
         $this->config = $config;
     }
+
+    /**
+     * @return \HTRouter\VarContainer
+     */
     function getConfig() {
         return $this->config;
     }

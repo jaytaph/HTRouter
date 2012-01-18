@@ -240,13 +240,14 @@ class Condition {
 
     /**
      * Actual workload of condition matching
+     * @return bool
      */
     protected function _checkMatch() {
         // check our match
         $match = false;
 
-        // Expand the test string
-        $expanded = $this->_testStringType;
+//        // Expand the test string
+//        $expanded = $this->_testStringType;
 
         switch ($this->_testStringType) {
             case self::TYPE_RULE_BACKREF :
@@ -340,8 +341,7 @@ class Condition {
 
     protected function _expandTestString($string) {
         $request = $this->getRequest();
-
-        // @TODO: There can be only one item.. so return after expansion!
+        $router = \HTrouter::getInstance();
 
         $string = str_replace("%{HTTP_USER_AGENT}", $request->getServerVar("HTTP_USER_AGENT"), $string);
         $string = str_replace("%{HTTP_REFERER}", $request->getServerVar("HTTP_REFERER"), $string);
@@ -351,30 +351,31 @@ class Condition {
         $string = str_replace("%{HTTP_PROXY_CONNECTION}", $request->getServerVar("HTTP_PROXY_CONNECTION"), $string);
         $string = str_replace("%{HTTP_ACCEPT}", $request->getServerVar("HTTP_ACCEPT"), $string);
 
-        // @TODO: Still need to do these...
         $string = str_replace("%{REMOTE_ADDR}", $request->getServerVar("REMOTE_ADDR"), $string);
         $string = str_replace("%{REMOTE_HOST}", $request->getServerVar("REMOTE_HOST"), $string);
         $string = str_replace("%{REMOTE_PORT}", $request->getServerVar("REMOTE_PORT"), $string);
 
-        $string = str_replace("%{REMOTE_USER}", $request->getAuthenticatedUser(), $string);
+        $string = str_replace("%{REMOTE_USER}", $request->getAuthUser(), $string);
         $string = str_replace("%{REMOTE_IDENT}", "", $string);                                         // We don't support identing!
-        $string = str_replace("%{REQUEST_METHOD}", $request->getServerVar("REQUEST_METHOD"), $string);
+        $string = str_replace("%{REQUEST_METHOD}", $request->getMethod(), $string);
         $string = str_replace("%{SCRIPT_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
         $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);
-        $string = str_replace("%{QUERY_STRING}", $request->getServerVar("QUERY_STRING"), $string);
-        if ($request->getAuthType())
+        $string = str_replace("%{QUERY_STRING}", $request->getQueryString(), $string);
+        if ($request->getAuthType()) {
             // @codeCoverageIgnoreStart
-            // @TODO: This needs to be added to the unittesting
             $string = str_replace("%{AUTH_TYPE}", $request->getAuthType()->getAuthType(), $string);     // Returns either Basic or Digest
             // @codeCoverageIgnoreEnd
+        } else {
+            $string = str_replace("%{AUTH_TYPE}", "", $string);
+        }
 
-        $string = str_replace("%{DOCUMENT_ROOT}", $request->getServerVar("DOCUMENT_ROOT"), $string);
+        $string = str_replace("%{DOCUMENT_ROOT}", $request->getDocumentRoot(), $string);
         $string = str_replace("%{SERVER_ADMIN}", $request->getServerVar("SERVER_ADMIN"), $string);
         $string = str_replace("%{SERVER_NAME}", $request->getServerVar("SERVER_NAME"), $string);
         $string = str_replace("%{SERVER_ADDR}", $request->getServerVar("SERVER_ADDR"), $string);
         $string = str_replace("%{SERVER_PORT}", $request->getServerVar("SERVER_PORT"), $string);
         $string = str_replace("%{SERVER_PROTOCOL}", $request->getServerVar("SERVER_PROTOCOL"), $string);
-        $string = str_replace("%{SERVER_SOFTWARE}", $request->getServerVar("SERVER_SOFTWARE"), $string);
+        $string = str_replace("%{SERVER_SOFTWARE}", $router->getServerSoftware(), $string);
 
         // Non-deterministic, but it won't change over the course of a request, even if the seconds have changed!
         $string = str_replace("%{TIME_YEAR}", date("Y"), $string);  // 2011
@@ -386,8 +387,7 @@ class Condition {
         $string = str_replace("%{TIME_WDAY}", date("w"), $string);  // 0-6 (sun-sat)
         $string = str_replace("%{TIME}", date("YmdHis"), $string);  // %04d%02d%02d%02d%02d%02d
 
-        // @TODO: Make sure these get* functions exists
-        $string = str_replace("%{API_VERSION}", \HTRouter::API_VERSION, $string);
+        $string = str_replace("%{API_VERSION}", $router->getServerApi(), $string);
         $string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);
         $string = str_replace("%{REQUEST_URI}", $request->getServerVar("REQUEST_URI"), $string);
         $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);

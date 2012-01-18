@@ -26,14 +26,14 @@ class Logger {
     protected $_logLevel = null;
 
     /**
-     * @var string
+     * @var resource
      */
-    protected $_logFile = null;
+    protected $_logFileHandle = null;
 
     /**
      * @var resource
      */
-    protected $_logSyslog = false;
+    protected $_logSyslogHandle = false;
 
     /**
      * @var array All errors that resulted in this request
@@ -65,10 +65,10 @@ class Logger {
         if ($level < $this->_logLevel) return;
 
         // Log to syslog
-        if ($this->_logSyslog || ! $this->_logFile) {
-            $this->_logSyslog($level, $error);
+        if ($this->_logSyslogHandle || ! $this->_logFileHandle) {
+            $this->_logToSyslog($level, $error);
         } else {
-            $this->logFile($this->_logFile, $level, $error);
+            $this->_logToFile($level, $error);
         }
 
 
@@ -97,21 +97,21 @@ class Logger {
         }
 
         // Check logfile
-        if (isset ($this->_['logfile'])) {
-            $tmp = $this->_['logfile'];
+        if (isset ($config['logfile'])) {
+            $tmp = $config['logfile'];
             if ($tmp == "-") {
                 // Log to syslog
-                //openlog("htrouter", LOG_PID | LOG_PERROR, LOG_USER);
-                $this->_logSyslog = true;
+                // openlog("htrouter", LOG_PID | LOG_PERROR, LOG_USER);
+                $this->_logSyslogHandle = true;
             } else {
                 // Otherwise, open file
-                $this->_logFile = fopen($tmp, "a");
+                $this->_logFileHandle = fopen($tmp, "a");
             }
         }
     }
 
 
-    protected function _logSyslog($level, $error) {
+    protected function _logToSyslog($level, $error) {
         switch ($level) {
             default :
             case self::ERRORLEVEL_NOTICE :
@@ -130,7 +130,7 @@ class Logger {
         syslog($sysLevel, $error);
     }
 
-    protected function _logFile($resource, $level, $error) {
+    protected function _logToFile($level, $error) {
         // Do file logging
        switch ($level) {
            case self::ERRORLEVEL_DEBUG :
@@ -148,7 +148,7 @@ class Logger {
                break;
        }
        $timestamp = date("Y/m/d H:i:s");
-       fwrite($resource, "[".$timestamp."] ".$levelStr." ".$error."\n");
+       fwrite($this->_logFileHandle, "[".$timestamp."] ".$levelStr." ".$error."\n");
     }
 
 }

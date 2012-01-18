@@ -214,6 +214,9 @@ class Rule {
 
     function getFlag($type) {
         foreach ($this->getFlags() as $flag) {
+            /**
+             * @var $flag \HTRouter\Module\Rewrite\Flag
+             */
             if ($flag->getType() == $type) {
                 return $flag;
             }
@@ -231,6 +234,10 @@ class Rule {
 
         // First, check conditions
         foreach ($this->getCondititions() as $condition) {
+            /**
+             * @var $condition \HTRouter\Module\Rewrite\Condition
+             */
+
             // Check if condition matches
             $match = $condition->matches();
 
@@ -278,7 +285,7 @@ class Rule {
         }
 
         if ($this->_substitutionType == self::TYPE_SUB) {
-            $src_url = parse_url($url_path);
+            $src_url = parse_url($request->getUri());
             $dst_url = parse_url($this->_substitution);
             if (! isset($src_url['host'])) $src_url['host'] = "";
             if (! isset($dst_url['host'])) $dst_url['host'] = "";
@@ -287,7 +294,7 @@ class Rule {
             if ($dst_url['host'] != $src_url['host'] || $this->hasFlag(Flag::TYPE_REDIRECT)) {
                 $url = $utils->unparse_url($dst_url);
                 $request->appendOutHeaders("Location", $url);
-                return \HTRouter::STATUS_REDIRECT_PERMANENTLY;
+                return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
             }
 
             // Change url_path

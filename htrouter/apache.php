@@ -17,7 +17,8 @@ if (!function_exists("apache_request_headers")) {
     }
 
     function apache_get_version() {
-        return "Apache/2.2.0 (HTRouter)";
+        $router = \HTRouter::getInstance();
+        return $router->getServerSoftware();
     }
 
     function apache_getenv($variable, $walk_to_top) {
@@ -29,11 +30,7 @@ if (!function_exists("apache_request_headers")) {
     }
 
     function apache_note($note_name, $note_value = null) {
-        $router = \HTRouter::getInstance();
-        if ($note_value != null) {
-            $router->setNote($note_name, $note_value);
-        }
-        $router->getNote($note_name);
+        return "";
     }
 
     function apache_request_headers() {

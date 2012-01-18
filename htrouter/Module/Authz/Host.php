@@ -25,9 +25,9 @@ class Host Extends \HTRouter\AuthzModule {
         $router->registerHook(\HTRouter::HOOK_CHECK_ACCESS, array($this, "checkAccess"));
 
         // Set default values
-        $this->getConfig()->setAccessOrder(self::DENY_THEN_ALLOW);
-        $this->getConfig()->setAccessDeny(array());
-        $this->getConfig()->setAccessAllow(array());
+        $this->getConfig()->set("AccessOrder", self::DENY_THEN_ALLOW);
+        $this->getConfig()->set("AccessDeny", array());
+        $this->getConfig()->set("AccessAllow", array());
     }
 
 
@@ -45,7 +45,7 @@ class Host Extends \HTRouter\AuthzModule {
 
         // Convert each item on the line to our custom "entry" object
         foreach ($this->_convertToEntry($match[1]) as $item) {
-            $this->getConfig()->appendAccessAllow($item);
+            $this->getConfig()->append("AccessAllow", $item);
         }
     }
 
@@ -56,7 +56,7 @@ class Host Extends \HTRouter\AuthzModule {
 
         // Convert each item on the line to our custom "entry" object
         foreach ($this->_convertToEntry($match[1]) as $item) {
-            $this->getConfig()->appendAccessDeny($item);
+            $this->getConfig()->append("AccessDeny", $item);
         }
 
     }
@@ -69,7 +69,7 @@ class Host Extends \HTRouter\AuthzModule {
         $value = $utils->fetchDirectiveFlags($line, array("allow,deny" => self::ALLOW_THEN_DENY,
                                                           "deny,allow" => self::DENY_THEN_ALLOW,
                                                           "mutual-failure" => self::MUTUAL_FAILURE));
-        $this->getConfig()->setAccessOrder($value);
+        $this->getConfig()->set("AccessOrder", $value);
     }
 
 
@@ -83,28 +83,28 @@ class Host Extends \HTRouter\AuthzModule {
     public function checkAccess(\HTRouter\Request $request) {
 
         // The way we parse things depends on the "order"
-        switch ($this->getConfig()->getAccessOrder()) {
+        switch ($this->getConfig()->get("AccessOrder")) {
             case self::ALLOW_THEN_DENY :
                 $result = false;
-                if ($this->_findAllowDeny($this->getConfig()->getAccessAllow())) {
+                if ($this->_findAllowDeny($this->getConfig()->get("AccessAllow"))) {
                     $result = \HTRouter::STATUS_OK;
                 }
-                if ($this->_findAllowDeny($this->getConfig()->getAccessDeny())) {
+                if ($this->_findAllowDeny($this->getConfig()->get("AccessDeny"))) {
                     $result = \HTRouter::STATUS_HTTP_FORBIDDEN;
                 }
                 break;
             case self::DENY_THEN_ALLOW :
                 $result = \HTRouter::STATUS_OK;
-                if ($this->_findAllowDeny($this->getConfig()->getAccessDeny())) {
+                if ($this->_findAllowDeny($this->getConfig()->get("AccessDeny"))) {
                     $result = \HTRouter::STATUS_HTTP_FORBIDDEN;
                 }
-                if ($this->_findAllowDeny($this->getConfig()->getAccessAllow())) {
+                if ($this->_findAllowDeny($this->getConfig()->get("AccessAllow"))) {
                     $result = \HTRouter::STATUS_OK;
                 }
                 break;
             case self::MUTUAL_FAILURE :
-                if ($this->_findAllowDeny($this->getConfig()->getAccessAllow()) and
-                    !$this->_findAllowDeny($this->getConfig()->getAccessDeny())) {
+                if ($this->_findAllowDeny($this->getConfig()->get("AccessAllow")) and
+                    !$this->_findAllowDeny($this->getConfig()->get("AccessDeny"))) {
                     $result = \HTRouter::STATUS_OK;
                 } else {
                     $result = \HTRouter::STATUS_HTTP_FORBIDDEN;
@@ -117,10 +117,10 @@ class Host Extends \HTRouter\AuthzModule {
 
         // Not ok. Now we need to check if "satisfy any" already got a satisfaction
         if ($result == \HTRouter::STATUS_HTTP_FORBIDDEN &&
-           ($this->getConfig()->getSatisfy() == "any" || count($this->getConfig()->getRequires(array()) == 0))) {
+           ($this->getConfig()->get("Satisfy") == "any" || count($this->getConfig()->get("Requires", array()) == 0))) {
             // Check if there is at least one require line in the htaccess. If found, it means that
             // we still have to possibility that we can be authorized
-            $request->logError(\HTRouter\Request::ERRORLEVEL_NOTICE, "Access denied for ".$request->getFilename()." / ".$request->getUri());
+            $this->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_ERROR, "Access denied for ".$request->getFilename()." / ".$request->getUri());
         }
 
         // Return what we need to return
@@ -134,21 +134,21 @@ class Host Extends \HTRouter\AuthzModule {
         foreach ($items as $entry) {
             switch ($entry->type) {
                 case "env" :
-                    $env = $this->getRouter()->getRequest()->getEnvironment();
+                    $env = $this->getRouter()->getEnvironment();
                     if (isset($env[$entry->env])) return true;
                     break;
                 case "nenv" :
-                    $env = $this->getRouter()->getRequest()->getEnvironment();
+                    $env = $this->getRouter()->getEnvironment();
                     if (! isset ($env[$entry->env])) return true;
                     break;
                 case "all" :
                     return true;
                     break;
                 case "ip" :
-                    if ($utils->checkMatchingIP($entry->ip, $this->getRouter()->getRequest()->getIp())) return true;
+                    if ($utils->checkMatchingIP($entry->ip, $this->getRequest()->getIp())) return true;
                     break;
                 case "host" :
-                    if ($utils->checkMatchingHost($entry->host, $this->getRouter()->getRequest()->getIp())) return true;
+                    if ($utils->checkMatchingHost($entry->host, $this->getRequest()->getIp())) return true;
                     break;
                 default:
                     throw new \LogicException("Unknown entry type: ".$entry->type);
@@ -162,6 +162,7 @@ class Host Extends \HTRouter\AuthzModule {
      * Convert a line to an array of simple entry objects
      *
      * @param $line
+     * @return array
      */
     protected function _convertToEntry($line) {
         $entries = array();

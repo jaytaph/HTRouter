@@ -24,7 +24,8 @@ class DIContainer {
         }
 
         if (is_callable($this->_values[$key])) {
-            return $this->_values[$key]($this);
+            $method = (string)$this->_values[$key];
+            return $method($this);
         }
 
         return $this->_values[$key];

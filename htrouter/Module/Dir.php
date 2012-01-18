@@ -22,29 +22,29 @@ class Dir extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "dirFixups"), 99);
 
         // Set default values
-        $this->getConfig()->setDirectorySlash(true);
+        $this->getConfig()->set("DirectorySlash", true);
     }
 
     public function DirectoryIndexDirective(\HTRouter\Request $request, $line) {
         $localUrls = explode(" ", $line);
         foreach ($localUrls as $url) {
-            $this->getConfig()->appendDirectoryIndex($url);
+            $this->getConfig()->append("DirectoryIndex", $url);
         }
     }
 
     public function DirectorySlashDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => true, "off" => false));
-        $this->getConfig()->setDirectorySlash($value);
+        $this->getConfig()->set("DirectorySlash", $value);
     }
 
     public function FallbackResourceDirective(\HTRouter\Request $request, $line) {
-        $this->getConfig()->setFallbackResource($line);
+        $this->getConfig()->set("FallbackResource", $line);
     }
 
     protected function _fixup_dflt(\HTRouter\Request $request) {
         // Do fallback
-        $path = $this->getConfig()->getFallbackResource();
+        $path = $this->getConfig()->get("FallbackResource");
         if ($path == false) {
             return \HTRouter::STATUS_DECLINED;
         }
@@ -94,7 +94,7 @@ class Dir extends Module {
         // Check if it doesn't end on a slash?
         if (!empty($url) and ($url[strlen($url)-1] != '/')) {
             // We are fixing a directory and we aren't allowed to add a slash. No good.
-            if ($this->getConfig()->getDirectorySlash() == false) {
+            if ($this->getConfig()->get("DirectorySlash") == false) {
                 return \HTRouter::STATUS_DECLINED;
             }
 
@@ -112,7 +112,7 @@ class Dir extends Module {
         $error_notfound = false;
 
         // We can safely check and match against our directory index now
-        $names = $this->getConfig()->getDirectoryIndex();
+        $names = $this->getConfig()->get("DirectoryIndex");
         $names[] = self::DEFAULT_DIRECTORY_INDEX_FILE;        // @TODO: Seriously wrong. This needs to be placed in config?
         foreach ($names as $name) {
             $url = $this->_updateUrl($request->getUri(), $name);
@@ -160,11 +160,6 @@ class Dir extends Module {
         return \HTRouter::STATUS_DECLINED;
     }
 
-    public function getAliases() {
-        return array("mod_dir.c", "mod_dir");
-    }
-
-
     protected function _updateUrl($url, $path) {
         $utils = new \HTRouter\Utils;
         $url = parse_url($url);
@@ -177,6 +172,10 @@ class Dir extends Module {
         }
         $url = $utils->unparse_url($url);
         return $url;
+    }
+
+    public function getAliases() {
+        return array("mod_dir.c", "mod_dir");
     }
 
 }

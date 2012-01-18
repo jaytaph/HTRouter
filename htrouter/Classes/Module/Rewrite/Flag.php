@@ -42,16 +42,25 @@ class Flag {
         return $ret;
     }
 
+    /**
+     * @return null|string
+     */
     public function getKey()
     {
         return $this->_key;
     }
 
+    /**
+     * @return null|string
+     */
     public function getType()
     {
         return $this->_type;
     }
 
+    /**
+     * @return null|string
+     */
     public function getValue()
     {
         return $this->_value;

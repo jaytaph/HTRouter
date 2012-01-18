@@ -19,10 +19,14 @@ class HTRouter {
     // Array with default configuration after initialization of the modules (default .htaccess config)
     protected $_defaultConfig;
 
-    const API_VERSION = "123.45";       // Useless API version
+    // Global environment
+    protected $_env = array();
 
+    const API_VERSION       = "123.45";       // Useless API version
+    const SERVER_SOFTWARE   = "Apache/2.2.0 (HTRouter)";      // Useless server string
 
-    const MAX_RECURSION = 15;           // @TODO: Must be set inside the configuration?
+    // Number of "subrequests" we can have maximum (prevent deadlocks)
+    const MAX_RECURSION = 15;                   // @TODO: Must be set inside the configuration?
 
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
     const STATUS_DECLINED                   =  -1;
@@ -79,7 +83,7 @@ class HTRouter {
     private function __construct() {
         // Create DI container
         $this->_container = new \HTRouter\HTDIContainer();
-        $this->_container->name = "MainRequest";
+        //$this->_container->name = "MainRequest";
 
         // Set router
         $this->_container->setRouter($this);
@@ -116,7 +120,7 @@ class HTRouter {
         $this->_getRequest()->setStatus($status);
 
         // All done. But we need to do a final check to see which handler we need to fetch
-        $status = $this->runHook(self::HOOK_HANDLER, self::RUNHOOK_ALL, $this->_container);
+        $this->runHook(self::HOOK_HANDLER, self::RUNHOOK_ALL, $this->_container);
 
 
         // Set our $_SERVER variables correctly according to our new request information
@@ -129,7 +133,7 @@ class HTRouter {
             print "We are done. Status <b>".$this->_getRequest()->getStatus()."</b>. ";
 
             if ($this->_getRequest()->getStatus() == \HTRouter::STATUS_HTTP_OK) {
-                // @TODO Closure?
+                // @TODO Return as closure?
                 print "The file we need to include is : " . $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename()."<br>\n";
             } else {
                 print "We do not need to include a file but do something else: ".$this->_getRequest()->getStatusLine()."<br>\n";
@@ -166,6 +170,7 @@ class HTRouter {
      *
      * @param mixed $hook Hook to run
      * @param int $runtype The type of running
+     * @param \HTRouter\HTDIContainer $container
      * @return int Status
      * @throws LogicException When something wrong happens
      */
@@ -183,7 +188,7 @@ class HTRouter {
                 $method = $module[1];
                 $retval = $class->$method($container->getRequest());
 
-                // Check if it's boolean (@TODO: Old style return, must be removed when all is refactored)
+                // @TODO: Old style return, must be removed when everything is refactored
                 if (! is_numeric($retval)) {
                     throw new \LogicException("Return value must be a STATUS_* constant: found in ".get_class($class)." ->$method!");
                 }
@@ -224,21 +229,18 @@ class HTRouter {
 
         // Read module directory and initialize all modules
         $it = new RecursiveDirectoryIterator($path);
+        $it = new RecursiveRegexIterator($it, "/^.+\.php$/i");
         $it = new RecursiveIteratorIterator($it);
 
         foreach ($it as $file) {
             /**
              * @var $file SplFileInfo
              */
-            // @TODO: RegexIterator returns a file instead of a FileInfo Object :|
-            // @TODO: RecursiveFilterIterator instead of this...
-            if (! preg_match ('/^.+\.php$/i', $file->getBaseName())) continue;
-
             $p = $file->getPathName();
-            $p = str_replace($path, "", $p);
-            $p = str_replace("/", "\\", $p);
-            $p = str_replace(".php", "", $p);
-            $class = "\\HTRouter\\Module\\".$p;
+            $p = str_replace($path, "", $p);    // Remove base path
+            $p = str_replace("/", "\\", $p);    // Change / into \
+            $p = str_replace(".php", "", $p);   // Remove extension
+            $class = "\\HTRouter\\Module\\".$p; // Now we have got our actual class
 
             /**
              * @var $module \HTRouter\Module
@@ -268,7 +270,7 @@ class HTRouter {
      * Register a directive, a keyword that can be read from htaccess file
      *
      * @param HTRouter\Module $module The module to register
-     * @param $directive The directive to register the module on
+     * @param string $directive The directive to register the module on
      * @throws RuntimeException Thrown when the directive is already registered
      */
     public function registerDirective(\HTRouter\Module $module, $directive) {
@@ -382,9 +384,9 @@ class HTRouter {
      * Parse a complete or partial .htaccess file. When terminateLine is given, it will stop parsing until it finds
      * that particular line. Used when parsing blocks like <ifModule> etc..
      *
-     * @param HTRouter\Request $request Request to use during parsing
      * @param resource $f The file resource
      * @param string $terminateLine Additional line to end our reading (instead of EOF)
+     * @internal param \HTRouter\Request $request Request to use during parsing
      * @throws UnexpectedValueException Incorrect resource given
      */
     function parseConfig($f, $terminateLine = "") {
@@ -535,21 +537,21 @@ class HTRouter {
         $this->_getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Populating new request done");
     }
 
-    /**
-     * Copies a request into a new (sub)request. Also takes care of additional handlers/hooks
-     *
-     * @param HTRouter\Request $request
-     * @return HTRouter\Request The new copied request
-     */
-    function copyRequest(\HTRouter\Request $request) {
-        $new = new \HTRouter\Request($request);
-        $new->mergeVariables($request);
-
-        // Let SetEnvIf etc do their thing, again
-        $this->runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL, $this->_container);
-
-        return $new;
-    }
+//    /**
+//     * Copies a request into a new (sub)request. Also takes care of additional handlers/hooks
+//     *
+//     * @param HTRouter\Request $request
+//     * @return HTRouter\Request The new copied request
+//     */
+//    function copyRequest(\HTRouter\Request $request) {
+//        $new = new \HTRouter\Request($request);
+//        $new->mergeVariables($request);
+//
+//        // Let SetEnvIf etc do their thing, again
+//        $this->runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL, $this->_container);
+//
+//        return $new;
+//    }
 
     /**
      * Read INI configuration
@@ -558,8 +560,8 @@ class HTRouter {
      * @return array Complete array with configuration
      */
     protected function _readConfig($configPath) {
-        if (! is_readable($configPath)) return;
-        return  parse_ini_file($configPath, true);
+        if (! is_readable($configPath)) return array();
+        return parse_ini_file($configPath, true);
     }
 
     /**
@@ -573,7 +575,7 @@ class HTRouter {
 
     /**
      * Returns the logger
-     * @return mixed
+     * @return \HTRouter\Logger
      */
     function _getLogger() {
         return $this->_container->getLogger();
@@ -607,20 +609,54 @@ class HTRouter {
     }
 
 
-
-    function prepareContainerForSubRequest($url) {
-        $subrequest = clone ($this->_container->getRequest());
-        $subrequest->setMainRequest(false);
-        $subrequest->setUri($url);
-        $subrequest->setFilename(null);
-
-        $subContainer = clone ($this->_container);
-        $subContainer->name = $this->_container->name . " (SubRequest)";
-        //$subContainer->setConfig($this->_container->getRouter()->getDefaultConfig());
-        $subContainer->setRequest($subrequest);
-
-
-        return $subContainer;
+    /**
+     * Return a list of (installed) modules
+     *
+     * @return array
+     */
+    function getModules() {
+        $ret = array();
+        foreach ($this->_modules as $module) {
+            $ret .= get_class($module);
+        }
+        return $ret;
     }
 
+
+    function getEnvironment($key = null) {
+        if (! $key) return $this->_env;
+
+        return isset($this->_env[$key]) ? $this->_env[$key] : false;
+    }
+    function setEnvironment($key, $value) {
+        $this->_env[$key] = $value;
+    }
+    function unsetEnvironment($key) {
+        unset($this->_env[$key]);
+    }
+
+
+//    function prepareContainerForSubRequest($url) {
+//        $subrequest = clone ($this->_container->getRequest());
+//        $subrequest->setMainRequest(false);
+//        $subrequest->setUri($url);
+//        $subrequest->setFilename(null);
+//
+//        $subContainer = clone ($this->_container);
+//        //$subContainer->name = $this->_container->name . " (SubRequest)";
+//        //$subContainer->setConfig($this->_container->getRouter()->getDefaultConfig());
+//        $subContainer->setRequest($subrequest);
+//
+//
+//        return $subContainer;
+//    }
+
+
+    function getServerSoftware() {
+        return self::SERVER_SOFTWARE;
+    }
+
+    function getServerApi() {
+        return self::API_VERSION;
+    }
 }

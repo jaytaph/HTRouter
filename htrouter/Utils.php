@@ -36,6 +36,7 @@ class Utils {
      * Check is source matches destination. Source might be a subnet, partial ip, cidr
      * @param $src
      * @param $dst
+     * @return bool
      */
     function checkMatchingIP($src, $dst) {
         // Check if it's an IP or partial IP? (hasn't got a . in it)
@@ -52,9 +53,6 @@ class Utils {
             // Match against cidr
             return $this->_checkMatchingIP_Cidr($ip, $dst, $postfix);
         }
-
-        // Nothing found that matches
-        return false;
     }
 
     /**
@@ -230,6 +228,7 @@ class Utils {
     /**
      * Checks the actual filetype of the file that is mapped onto the URI.
      *
+     * @param \HTRouter\Request $request
      * @param $url
      * @return int
      */
@@ -237,9 +236,9 @@ class Utils {
         $filename = $this->findUriOnDisk($request, $url);
         $filename = $request->getDocumentRoot() . $filename;
 
-        if (! is_readable($path)) return self::URI_FILETYPE_MISSING;
-        if (is_dir($path)) return self::URI_FILETYPE_DIR;
-        if (is_file($path)) return self::URI_FILETYPE_FILE;
+        if (! is_readable($filename)) return self::URI_FILETYPE_MISSING;
+        if (is_dir($filename)) return self::URI_FILETYPE_DIR;
+        if (is_file($filename)) return self::URI_FILETYPE_FILE;
         return self::URI_FILETYPE_OTHER;
     }
 

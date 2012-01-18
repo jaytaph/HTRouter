@@ -17,7 +17,10 @@ class Digest extends \HTRouter\AuthModule {
     }
 
     public function authenticateDigestUser(\HTRouter\Request $request) {
-        $plugin = $this->_container->getConfig()->getAuthType();
+        /**
+         * @var $plugin \HTRouter\AuthModule
+         */
+        $plugin = $this->_container->getConfig()->get("AuthType");
         if (! $plugin || ! $plugin instanceof \HTRouter\AuthModule || $plugin->getName() != "Digest") {
             return \HTRouter::STATUS_DECLINED;
         }

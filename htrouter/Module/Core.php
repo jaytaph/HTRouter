@@ -28,17 +28,17 @@ class Core extends Module {
 
 
         // Set default values
-        $this->getConfig()->setSatisfy("all");
+        $this->getConfig()->set("Satisfy", "all");
     }
 
     public function requireDirective(\HTRouter\Request $request, $line) {
-        $this->getConfig()->appendRequire($line);
+        $this->getConfig()->append("Require", $line);
     }
 
     public function satisfyDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("all" => "all", "any" => "any"));
-        $this->getConfig()->setSatisfy($value);
+        $this->getConfig()->set("Satisfy", $value);
     }
 
     public function gt_ifmoduleDirective(\HTRouter\Request $request, $line) {
@@ -53,17 +53,17 @@ class Core extends Module {
         $router = \HTRouter::getInstance();
         if (! $router->findModule($module)) {
             // Module does not exist, so skip this configuration block
-            $router->skipConfig($this->getConfig()->getHTAccessFileResource(), "</IfModule>");
+            $router->skipConfig($this->getConfig()->get("HTAccessFileResource"), "</IfModule>");
         } else {
             // Module does exist, read this configuration block
-            $router->parseConfig($this->getConfig()->getHTAccessFileResource(), "</IfModule>");
+            $router->parseConfig($this->getConfig()->get("HTAccessFileResource"), "</IfModule>");
         }
     }
 
     public function authNameDirective(\HTRouter\Request $request, $line) {
         $line = trim($line);
         $line = trim($line, "\"\'");
-        $this->getConfig()->setAuthName($line);
+        $this->getConfig()->set("AuthName", $line);
     }
 
     public function authTypeDirective(\HTRouter\Request $request, $line) {
@@ -76,7 +76,7 @@ class Core extends Module {
             throw new \InvalidArgumentException("Cannot find $name");
         }
 
-        $this->getConfig()->setAuthType($plugin);
+        $this->getConfig()->set("AuthType", $plugin);
     }
 
 
@@ -185,6 +185,7 @@ class Core extends Module {
         }
         $path = explode("/", $dirname);
         if (empty($path[count($path)-1])) array_pop($path);
+        $dirs = array();
         while (count($path) > 0) {
             $dirs[] = $request->getDocumentRoot() . join("/", $path);
             array_pop($path);
@@ -227,14 +228,14 @@ class Core extends Module {
 
         // Read HTACCESS
         $f = fopen($htaccessPath, "r");
-        $this->getConfig()->setHTAccessFileResource($f);  // temporary saving of the filehandle resource
+        $this->getConfig()->set("HTAccessFileResource", $f);  // temporary saving of the filehandle resource
 
         // Parse config
         $router = \HTRouter::getInstance();
         $router->parseConfig($f);
 
         // Remove from config and close file
-        $this->getConfig()->unsetHTAccessFileResource();
+        $this->getConfig()->clear("HTAccessFileResource");
         fclose($f);
 
         // Save new config and restore current configuration
@@ -249,43 +250,8 @@ class Core extends Module {
     }
 
 
-
-
-
-
     public function getAliases() {
         return array("core.c", "core");
     }
-
-    // Core Directives (Apache 2.2.x)
-    // AcceptPathInfo
-    // AccessFileName
-    // AddDefaultCharset
-    // AddOutputFilterByType
-    // AllowOverride
-    // CGIMapExtension
-    // ContentDigest
-    // DefaultType
-    // EnableMMAP
-    // EnableSendfile
-    // ErrorDocument
-    // FileETag
-    // <Files>
-    // <FilesMatch>
-    // ForceType
-    // <IfDefine>
-    // <Limit>
-    // <LimitExcept>
-    // LimitRequestBody
-    // LimitXMLRequestBody
-    // Options
-    // RLimitCPU
-    // RLimitMEM
-    // RLimitNPROC
-    // ScriptInterpreterSource
-    // ServerSignature
-    // SetHandler
-    // SetInputFilter
-    // SetOutputFilter
 
 }

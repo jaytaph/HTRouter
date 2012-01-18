@@ -23,7 +23,7 @@ abstract class Module  {
     }
 
     /**
-     * @return \VarContainer
+     * @return \HTRouter\VarContainer
      */
     public function getConfig() {
         return $this->_container->getConfig();

@@ -22,24 +22,24 @@ class User extends \HTRouter\AuthzModule {
     public function AuthzUserAuthoritativeDirective(\HTRouter\Request $request, $line) {
         $utils = new \HTRouter\Utils;
         $value = $utils->fetchDirectiveFlags($line, array("on" => "on", "off" => "off"));
-        $this->getConfig()->setAuthzUserAuthoritative($value);
+        $this->getConfig()->set("AuthzUserAuthoritative", $value);
     }
 
     public function checkUserAccess(\HTRouter\Request $request) {
         // Any will do, and we are already authenticated through the "allow/deny" rules. No Need to check this.
         // @TODO: This code must be moved to HTRouter::_run()
-        if ($request->vars->getSatisfy() == "any" && $request->getAuthorized()) {
-            return \AuthModule::AUTHZ_GRANTED;
+        if ($this->getConfig()->get("Satisfy") == "any" && $request->getAuthorized()) {
+            return \HTRouter\AuthModule::AUTHZ_GRANTED;
         }
 
-        $requires = $request->getRequire();
+        $requires = $this->getConfig()->get("Require");
         foreach ($requires as $require) {
             if (strtolower($require) == "valid-user") {
                 // Set the authorized user inside the request
-                $user = $request->getAuthenticatedUser();
-                $request->setAuthorizedUser($user);
-                $request->setIsAuthorized(true);
-                return \AuthModule::AUTHZ_GRANTED;
+                $user = $request->getAuthUser();
+                $request->setAuthUser($user);
+                $request->setAuthorized(true);
+                return \HTRouter\AuthModule::AUTHZ_GRANTED;
             }
 
             // Check if it starts with 'user'
@@ -51,22 +51,22 @@ class User extends \HTRouter\AuthzModule {
 
             // Parse all users on this line to check if it matches against the currently authenticated user
             foreach ($users as $user) {
-                if ($user == $request->getAuthenticatedUser()) {
+                if ($user == $request->getAuthUser()) {
                     // Set the authorized user inside the request
-                    $request->setAuthorizedUser($user);
-                    $request->setIsAuthorized(true);
-                    return \AuthModule::AUTHZ_GRANTED;
+                    $request->setAuthUser($user);
+                    $request->setAuthorized(true);
+                    return \HTRouter\AuthModule::AUTHZ_GRANTED;
                 }
             }
         }
 
         // If the module is authorative we should deny access. This will stop other modules from trying to match..
-        if ($request->vars->getAuthzUserAuthoritative() == "on") {
-            return \AuthModule::AUTHZ_DENIED;
+        if ($this->getConfig()->get("AuthzUserAuthoritative") == "on") {
+            return \HTRouter\AuthModule::AUTHZ_DENIED;
         }
 
         // Nothing that matches found, and w
-        return \AuthModule::AUTHZ_NOT_FOUND;
+        return \HTRouter\AuthModule::AUTHZ_NOT_FOUND;
     }
 
     public function getAliases() {

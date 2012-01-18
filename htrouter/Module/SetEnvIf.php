@@ -23,7 +23,7 @@ class SetEnvIf extends Module {
         $router->registerHook(\HTRouter::HOOK_POST_READ_REQUEST, array($this, "matchHeaders"));
 
         // Set default values
-        $this->getConfig()->setSetEnvIf(array());
+        $this->getConfig()->set("SetEnvIf", array());
     }
 
     public function BrowserMatchDirective(\HTRouter\Request $request, $line) {
@@ -45,12 +45,12 @@ class SetEnvIf extends Module {
 
     public function SetEnvIfDirective(\HTRouter\Request $request, $line) {
         $entry = $this->_parseLine($request, $line, false);
-        $this->getConfig()->appendSetEnvIf($entry);
+        $this->getConfig()->append("SetEnvIf", $entry);
     }
 
     public function SetEnvIfNoCaseDirective(\HTRouter\Request $request, $line) {
-        $this->_parseLine($request, $line, true);
-        $this->getConfig()->appendSetEnvIf($entry);
+        $entry = $this->_parseLine($request, $line, true);
+        $this->getConfig()->append("SetEnvIf", $entry);
     }
 
     protected function _parseLine(\HTRouter\Request $request, $line, $nocase) {
@@ -71,7 +71,7 @@ class SetEnvIf extends Module {
 
 
     function matchHeaders(\HTRouter\Request $request) {
-        foreach ($this->getConfig()->getSetEnvIf() as $entry) {
+        foreach ($this->getConfig()->get("SetEnvIf") as $entry) {
             $val = "";
             switch (strtolower($entry->attribute)) {
                 case "remote_host" :
@@ -94,7 +94,7 @@ class SetEnvIf extends Module {
                     break;
                 default :
                     // Match all headers until we find a match
-                    $tmp = array_merge($request->getHeaders(), $request->getEnvironment());
+                    $tmp = array_merge($request->getInHeaders(), $this->getRouter()->getEnvironment());
                     foreach ($tmp as $header => $value) {
                         if ($entry->attribute_is_regex) {
                             // Match against regex
@@ -145,15 +145,15 @@ class SetEnvIf extends Module {
             if ($env[0] == "!") {
                 // Unset !ENV
                 $env = substr($env, 1);
-                $request->removeEnvironment($env);
+                $this->getRouter()->unsetEnvironment($env);
                 continue;
             } elseif (strstr($env,"=")) {
                 // Set ENV=TEST  to ENV=>TEST
                 list($key,$val) = explode("=", $env);
-                $request->appendEnvironment($key, $val);
+                $this->getRouter()->setEnvironment($key, $val);
             } else {
                 // Set ENV  to ENV=>1
-                $request->appendEnvironment($env, 1);
+                $this->getRouter()->setEnvironment($env, 1);
             }
         }
     }

@@ -5,65 +5,62 @@ namespace HTRouter;
 class Processor {
     protected $_container;
 
-
-
     function __construct(\HTRouter\HTDIContainer $container) {
         $this->_container = $container;
     }
 
+//    /**
+//     * @param string $uri
+//     * @param \HTRouter\Request $request
+//     * @return HTRouter\Request SubRequest
+//     */
+//    function obsolete_subRequestLookupUri($uri, \HTRouter\Request $request) {
+//        $this->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "subRequestLookupUri($uri)");
+//
+//        // Save old info
+//        $oldRequest = $this->_container->getRequest();
+//        $oldConfig = $this->_container->getConfig();
+//
+//        // Create a new container
+//        $subRequest = $this->getRouter()->copyRequest($request);
+//        $this->_container->setRequest($subRequest);
+//        $this->_container->setConfig($this->getRouter()->getDefaultConfig());
+//
+//        $subRequest->setMethod("GET");
+//        if ($uri[0] != '/') {
+//            // Relative URI
+//            $uri = $this->getUri() . $uri;
+//        }
+//        $subRequest->setUri($uri);
+//
+//        if ($this->hasReachedRecursionLimits($subRequest)) {
+//            $subRequest->setStatus(\HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR);
+//            return $subRequest;
+//        }
+//
+//        $status = $this->processRequest($subRequest);
+//        $subRequest->setStatus($status);
+//
+//        $this->_container->setRequest($oldRequest);
+//        $this->_container->setConfig($oldConfig);
+//        return $subRequest;
+//    }
 
-    /**
-     * @param string $uri
-     * @param HTRouter\Request $request
-     * @return HTRouter\Request SubRequest
-     */
-    function obsolete_subRequestLookupUri($uri, \HTRouter\Request $request) {
-        $this->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "subRequestLookupUri($uri)");
-
-        // Save old info
-        $oldRequest = $this->_container->getRequest();
-        $oldConfig = $this->_container->getConfig();
-
-        // Create a new container
-        $subRequest = $this->getRouter()->copyRequest($request);
-        $this->_container->setRequest($subRequest);
-        $this->_container->setConfig($this->getRouter()->getDefaultConfig());
-
-        $subRequest->setMethod("GET");
-        if ($uri[0] != '/') {
-            // Relative URI
-            $uri = $this->getUri() . $uri;
-        }
-        $subRequest->setUri($uri);
-
-        if ($this->hasReachedRecursionLimits($subRequest)) {
-            $subRequest->setStatus(\HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR);
-            return $subRequest;
-        }
-
-        $status = $this->processRequest($subRequest);
-        $subRequest->setStatus($status);
-
-        $this->_container->setRequest($oldRequest);
-        $this->_container->setConfig($oldConfig);
-        return $subRequest;
-    }
-
-    /**
-     * Returns true when the number of parent sub requests found have reached a limit
-     *
-     * @param HTRouter\Request $request The last request in line
-     * @return bool true when limit reached, false otherwise
-     */
-    function hasReachedRecursionLimits(\HTRouter\Request $request) {
-        $level = 0;
-        while ($request->getParentRequest()) {
-            $level++;
-            $request = $request->getParentRequest();
-        }
-
-        return ($level > \HTrouter::MAX_RECURSION);
-    }
+//    /**
+//     * Returns true when the number of parent sub requests found have reached a limit
+//     *
+//     * @param HTRouter\Request $request The last request in line
+//     * @return bool true when limit reached, false otherwise
+//     */
+//    function hasReachedRecursionLimits(\HTRouter\Request $request) {
+//        $level = 0;
+//        while ($request->getParentRequest()) {
+//            $level++;
+//            $request = $request->getParentRequest();
+//        }
+//
+//        return ($level > \HTrouter::MAX_RECURSION);
+//    }
 
 
     /**
@@ -140,12 +137,12 @@ class Processor {
      * Do the authentication part of the request processing. It's a bit more complicated as the rest, so
      * we moved it into a separate method.
      *
-     * @param HTRouter\Request $request
+     * @param \HTRouter\HTRouter\Request|\HTRouter\Request $request
      * @return int Status
      */
     protected function _authenticate(\HTRouter\Request $request) {
         // Authentication depends on the satisfy flag (defaults to ALL)
-        switch ($this->getConfig()->getSatisfy("all")) {
+        switch ($this->getConfig()->get("Satisfy", "all")) {
             default :
             case "all" :
                 // Both access and authentication must be OK
@@ -156,7 +153,7 @@ class Processor {
 
                 // We only do this if there are any "requires". Without requires, we do not need to
                 // go into to the authentication process
-                if (count($this->getConfig()->getRequire(array())) > 0) {
+                if (count($this->getConfig()->get("Require", array())) > 0) {
 
                     // Check authentication
                     $status = $this->getRouter()->runHook(\HTRouter::HOOK_CHECK_USER_ID, \HTRouter::RUNHOOK_FIRST, $this->_container);
@@ -180,7 +177,7 @@ class Processor {
                 if ($status != \HTRouter::STATUS_OK) {
 
                     // No requires needed
-                    if (count($this->getConfig()->getRequire(array())) == 0) {
+                    if (count($this->getConfig()->get("Require", array())) == 0) {
                         return $this->_declDie($status, "check access", $request);
                     }
 
@@ -207,7 +204,7 @@ class Processor {
     /**
      * Do a location walk to check if we are still OK on the location (i guess)...
      *
-     * @param HTRouter\Request $request
+     * @param \HTRouter\HTRouter\Request|\HTRouter\Request $request
      * @return int Returns OK
      */
     protected function _locationWalk(\HTRouter\Request $request) {
@@ -222,7 +219,7 @@ class Processor {
      *
      * @param int $status The status code to check
      * @param string $str Logstring
-     * @param HTRouter\Request $request The request (for logging)
+     * @param \HTRouter\HTRouter\Request|\HTRouter\Request $request The request (for logging)
      * @return int status code
      */
     protected function _declDie($status, $str, \HTRouter\Request $request) {

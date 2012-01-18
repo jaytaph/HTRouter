@@ -23,7 +23,7 @@ class Alias extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
 
         // Set default values
-        $container->getConfig()->setRedirects(array());
+        $container->getConfig()->set("Redirects", array());
     }
 
     public function redirectDirective(\HTRouter\Request $request, $line) {
@@ -44,7 +44,7 @@ class Alias extends Module {
                 $redirect->http_status = 302;
             } elseif (strtolower($args[0]) == "seeother") {
                 $redirect->http_status = 303;
-            } elseif (strtolower($args[0]) == "gone" && count(args) == 2) {
+            } elseif (strtolower($args[0]) == "gone" && count($args) == 2) {
                 // Gone does not have 3 arguments, but 2!
                 $redirect->http_status = 410;
             } elseif (is_numeric($args[0]) && $args[0] >= 300 && $args[0] <= 399) {
@@ -75,7 +75,7 @@ class Alias extends Module {
         }
 
         // Add to the list
-        $this->getConfig()->appendRedirects($redirect);
+        $this->getConfig()->append("Redirects", $redirect);
     }
 
     public function redirectMatchDirective(\HTRouter\Request $request, $line) {
@@ -100,7 +100,7 @@ class Alias extends Module {
         }
 
         // check if name matches one of the redirects
-        foreach ($this->getConfig()->getRedirects() as $redirect) {
+        foreach ($this->getConfig()->get("Redirects") as $redirect) {
             // @TODO: Check if this is OK?
             $pos = strpos($request->getUri(), $redirect->urlpath);
             if ($pos === 0) {

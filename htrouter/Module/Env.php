@@ -21,16 +21,16 @@ class Env extends Module {
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
 
         // Set default values
-        $this->getConfig()->setPassEnv(array());
-        $this->getConfig()->setSetEnv(array());
-        $this->getConfig()->setUnsetEnv(array());
+        $this->getConfig()->set("PassEnv", array());
+        $this->getConfig()->set("SetEnv", array());
+        $this->getConfig()->set("UnsetEnv", array());
     }
 
     public function PassEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
             $env = trim($env);
-            $this->getConfig()->appendPassEnv($env);
+            $this->getConfig()->append("PassEnv", $env);
         }
     }
 
@@ -39,32 +39,32 @@ class Env extends Module {
         list($key, $val) = explode(" ", $line, 2);
         $key = trim($key);
         $val = trim($val);
-        $this->getConfig()->appendSetEnv(array($key, $val));
+        $this->getConfig()->append("SetEnv", array($key, $val));
     }
 
     public function UnsetEnvDirective(\HTRouter\Request $request, $line) {
         $envs = explode(" ", $line);
         foreach ($envs as $env) {
-            $this->getConfig()->appendUnsetEnv($env);
+            $this->getConfig()->append("UnsetEnv", $env);
         }
     }
 
     public function envFixup(\HTRouter\Request $request) {
         // Passthrough
-        foreach ($this->getConfig()->getPassEnv() as $env) {
+        foreach ($this->getConfig()->get("PassEnv") as $env) {
             if (isset($_ENV[$env])) {
-                $this->getConfig()->appendEnvironment($env, $_ENV[$env]);
+                $this->getConfig()->append("Environment", array($env => $_ENV[$env]));
             }
         }
 
         // Set Env
-        foreach ($this->getConfig()->getSetEnv() as $env) {
-            $this->getConfig()->appendEnvironment($env[0], $env[1]);
+        foreach ($this->getConfig()->get("SetEnv") as $env) {
+            $this->getConfig()->append("Environment", array($env[0] => $env[1]));
         }
 
         // Unset Env
-        foreach ($this->getConfig()->getUnsetEnv() as $env) {
-            $this->getConfig()->removeEnvironment($env);
+        foreach ($this->getConfig()->get("UnsetEnv") as $env) {
+            $this->getConfig()->clear("Environment", $env);
         }
 
         // All done. Proceed to next module

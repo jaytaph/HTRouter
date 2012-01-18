@@ -48,14 +48,18 @@ class Request {
     protected $_authDigest = "";
     protected $_authUser = "";
     protected $_authPass = "";
+    protected $_authorized = false;
     protected $_authType = null;
     protected $_server;
     protected $_queryString;
     protected $_notes;
+    protected $_user;
+    protected $_ip;
 
     // additional items
     protected $_documentRoot;
     protected $_mainConfig;
+    protected $_https;
 
 
     public function setArgs($args)
@@ -324,6 +328,44 @@ class Request {
 
     public function isMainRequest() {
         return $this->_mainRequest;
+    }
+
+    public function isSubRequest() {
+        return (! $this->isMainRequest());
+    }
+
+    public function isHttps() {
+        return ($this->getHttps() === true);
+    }
+
+    public function setIp($ip)
+    {
+        $this->_ip = $ip;
+    }
+
+    public function getIp()
+    {
+        return $this->_ip;
+    }
+
+    public function setAuthorized($authorized)
+    {
+        $this->_authorized = $authorized;
+    }
+
+    public function getAuthorized()
+    {
+        return $this->_authorized;
+    }
+
+    public function setHttps($https)
+    {
+        $this->_https = $https;
+    }
+
+    public function getHttps()
+    {
+        return $this->_https;
     }
 
 }
