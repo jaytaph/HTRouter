@@ -180,8 +180,13 @@ class Core extends Module {
             // THis is a "directory" (ie: /dir/, so filename is the dirname)
             $dirname = $fn;
         } else {
-            // A file, so get the dirname
-            $dirname = dirname($fn);
+            // This might be a directory, we should check to see if the file is a directory, if so, it's a dir
+            if (is_dir($request->getDocumentRoot() . $fn)) {
+                $dirname = $fn;
+            } else {
+                // A file, so get the dirname
+                $dirname = dirname($fn);
+            }
         }
         $path = explode("/", $dirname);
         if (empty($path[count($path)-1])) array_pop($path);
@@ -199,11 +204,15 @@ class Core extends Module {
 
             if (is_readable($htaccessPath)) {
                 // Read HTACCESS and merge information
-                $new_config = $this->_readHTAccess($request, $htaccessPath);
+                $newConfig = $this->_readHTAccess($request, $htaccessPath);
 
                 // Merge together with current request
-                $this->getConfig()->merge($new_config);
-//                $this->_container->setConfig($new_config);
+                foreach ($this->getRouter()->getModules() as $module) {
+                    /**
+                     * @var $module \HTRouter\Module
+                     */
+                    $module->mergeConfigs($this->getConfig(), $newConfig);
+                }
             }
         }
 

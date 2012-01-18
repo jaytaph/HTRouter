@@ -38,5 +38,18 @@ abstract class Module  {
         return $this->_container->getRouter();
     }
 
+
+    /**
+     * Called when need to merge variables from one container to another (for instance, when reading
+     * multiple .htaccess files)
+     */
+    public function mergeConfigs(\HTRouter\VarContainer $base, \HTRouter\VarContainer $add) {
+        return $base;
+    }
+
+    /**
+     * @abstract
+     * Returns a list of aliases for this module (mod_rewrite, rewrite_module, mod_rewrite.c, rewrite etc)
+     */
     abstract public function getAliases();
 }

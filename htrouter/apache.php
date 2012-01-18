@@ -13,7 +13,7 @@ if (!function_exists("apache_request_headers")) {
 
     function apache_get_modules() {
         $router = \HTRouter::getInstance();
-        return $router->getModules();
+        return $router->getModulesAsList();
     }
 
     function apache_get_version() {

@@ -22,8 +22,8 @@ class SetEnvIf extends Module {
         $router->registerHook(\HTRouter::HOOK_HEADER_PARSER, array($this, "matchHeaders"));
         $router->registerHook(\HTRouter::HOOK_POST_READ_REQUEST, array($this, "matchHeaders"));
 
-        // Set default values
-        $this->getConfig()->set("SetEnvIf", array());
+//        // Set default values
+//        $this->getConfig()->set("SetEnvIf", array());
     }
 
     public function BrowserMatchDirective(\HTRouter\Request $request, $line) {
@@ -53,6 +53,12 @@ class SetEnvIf extends Module {
         $this->getConfig()->append("SetEnvIf", $entry);
     }
 
+    public function mergeConfigs(\HTRouter\VarContainer $base, \HTRouter\VarContainer $add) {
+        $merged = array_merge($add->get("SetEnvIf", array()), $base->get("SetEnvIf", array()));
+        if (count($merged)) $base->set("SetEnvIf", $merged);
+    }
+
+
     protected function _parseLine(\HTRouter\Request $request, $line, $nocase) {
         $args = explode(" ", $line);
 
@@ -71,7 +77,7 @@ class SetEnvIf extends Module {
 
 
     function matchHeaders(\HTRouter\Request $request) {
-        foreach ($this->getConfig()->get("SetEnvIf") as $entry) {
+        foreach ($this->getConfig()->get("SetEnvIf", array()) as $entry) {
             $val = "";
             switch (strtolower($entry->attribute)) {
                 case "remote_host" :

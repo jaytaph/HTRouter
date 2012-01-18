@@ -20,10 +20,10 @@ class Env extends Module {
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
 
-        // Set default values
-        $this->getConfig()->set("PassEnv", array());
-        $this->getConfig()->set("SetEnv", array());
-        $this->getConfig()->set("UnsetEnv", array());
+//        // Set default values
+//        $this->getConfig()->set("PassEnv", array());
+//        $this->getConfig()->set("SetEnv", array());
+//        $this->getConfig()->set("UnsetEnv", array());
     }
 
     public function PassEnvDirective(\HTRouter\Request $request, $line) {
@@ -39,7 +39,7 @@ class Env extends Module {
         list($key, $val) = explode(" ", $line, 2);
         $key = trim($key);
         $val = trim($val);
-        $this->getConfig()->append("SetEnv", array($key, $val));
+        $this->getConfig()->append("SetEnv", $key, $val);
     }
 
     public function UnsetEnvDirective(\HTRouter\Request $request, $line) {
@@ -49,22 +49,33 @@ class Env extends Module {
         }
     }
 
+    public function mergeConfigs(\HTRouter\VarContainer $base, \HTRouter\VarContainer $add) {
+        $merged = array_merge($add->get("PassEnv", array()), $base->get("PassEnv", array()));
+        if (count($merged)) $base->set("PassEnv", $merged);
+
+        $merged = array_merge($add->get("SetEnv", array()), $base->get("SetEnv", array()));
+        if (count($merged)) $base->set("SetEnv", $merged);
+
+        $merged = array_merge($add->get("UnsetEnv", array()), $base->get("UnsetEnv", array()));
+        if (count($merged)) $base->set("UnsetEnv", $merged);
+    }
+
     public function envFixup(\HTRouter\Request $request) {
         // Passthrough
-        foreach ($this->getConfig()->get("PassEnv") as $env) {
+        foreach ($this->getConfig()->get("PassEnv", array()) as $env) {
             if (isset($_ENV[$env])) {
-                $this->getConfig()->append("Environment", array($env => $_ENV[$env]));
+                $this->getRouter()->setEnvironment($env, $_ENV[$env]);
             }
         }
 
         // Set Env
-        foreach ($this->getConfig()->get("SetEnv") as $env) {
-            $this->getConfig()->append("Environment", array($env[0] => $env[1]));
+        foreach ($this->getConfig()->get("SetEnv", array()) as $key => $val) {
+            $this->getRouter()->setEnvironment($key, $val);
         }
 
         // Unset Env
-        foreach ($this->getConfig()->get("UnsetEnv") as $env) {
-            $this->getConfig()->clear("Environment", $env);
+        foreach ($this->getConfig()->get("UnsetEnv", array()) as $env) {
+            $this->getRouter()->unsetEnvironment($env);
         }
 
         // All done. Proceed to next module

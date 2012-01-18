@@ -245,8 +245,21 @@ class HTRouter {
              * @var $module \HTRouter\Module
              */
             $module = new $class();
-            $module->init($this, $this->_container);
 
+
+            // Check if the module matches an alias in our disabled_modules
+            $disabled = false;
+            $routerConfig = $this->_getRouterConfig();
+            $disabled_modules = preg_split("/,\s*/", $routerConfig['global']['disabled_modules']);
+            foreach ($disabled_modules as $dismod) {
+                if (in_array($dismod, $module->getAliases())) {
+                    $disabled = true;
+                }
+            }
+            // Continue with next module if disabled
+            if ($disabled) continue;
+
+            $module->init($this, $this->_container);
             $this->_modules[] = $module;
         }
 
@@ -612,12 +625,16 @@ class HTRouter {
      *
      * @return array
      */
-    function getModules() {
+    function getModulesAsList() {
         $ret = array();
         foreach ($this->_modules as $module) {
-            $ret .= get_class($module);
+            $ret[] = get_class($module);
         }
         return $ret;
+    }
+
+    function getModules() {
+        return $this->_modules;
     }
 
 //    function prepareContainerForSubRequest($url) {
@@ -667,4 +684,5 @@ class HTRouter {
     function getLogger() {
         return $this->_container->getLogger();
     }
+
 }

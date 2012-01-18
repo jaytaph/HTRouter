@@ -263,7 +263,7 @@ thenext:
      */
     public function getAliases()
     {
-        return array("mod_rewrite.c", "module_rewrite", "rewriteModule");
+        return array("mod_rewrite", "rewrite", "mod_rewrite.c", "module_rewrite", "rewriteModule");
     }
 
 }

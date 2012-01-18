@@ -42,6 +42,12 @@ class Dir extends Module {
         $this->getConfig()->set("FallbackResource", $line);
     }
 
+    public function mergeConfigs(\HTRouter\VarContainer $base, \HTRouter\VarContainer $add) {
+        $base->set("DirectoryIndex", $add->get("DirectoryIndex") ? $add->get("DirectoryIndex") : $base->get("DirectoryIndex"));
+        $base->set("DirectorySlash", $add->get("DirectorySlash") == false ? $base->get("DirectorySlash") : $add->get("DirectorySlash"));
+        $base->set("FallbackResource", $add->get("FallbackResource") ? $add->get("FallbackResource") : $base->get("FallbackResource"));
+    }
+
     protected function _fixup_dflt(\HTRouter\Request $request) {
         // Do fallback
         $path = $this->getConfig()->get("FallbackResource");

@@ -22,8 +22,13 @@ class Alias extends Module {
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "translateName"));
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
 
-        // Set default values
-        $container->getConfig()->set("Redirects", array());
+//        // Set default values
+//        $container->getConfig()->set("Redirects", array());
+    }
+
+    public function mergeConfigs(\HTRouter\VarContainer $base, \HTRouter\VarContainer $add) {
+        $merged = array_merge($add->get("Redirects", array()), $base->get("Redirects", array()));
+        if (count($merged)) $base->set("Redirects", $merged);
     }
 
     public function redirectDirective(\HTRouter\Request $request, $line) {
@@ -100,7 +105,7 @@ class Alias extends Module {
         }
 
         // check if name matches one of the redirects
-        foreach ($this->getConfig()->get("Redirects") as $redirect) {
+        foreach ($this->getConfig()->get("Redirects", array()) as $redirect) {
             // @TODO: Check if this is OK?
             $pos = strpos($request->getUri(), $redirect->urlpath);
             if ($pos === 0) {
