@@ -1,10 +1,9 @@
 [.] Fix module mod_rewrite
-[ ] Add default fallback module for authentication (really needed?)
-[ ] Trimming should be done by config parser, not the actual modules
-[ ] refactor explode() into preg_split()  (why is that again?)
-[ ] Correct path-info when dealing with apache router.php and uri: /router.php/test/blaat.php/this/is/pathinfo?debug
 [ ] Remove subrequests. We don't use them (maybe dir.c uses it?)
 [ ] Condition / _expandTestString needs to be fixed
-[ ] When merging variables, we should have an additional parameter specifying on what to merge (from a method inside module?)
-[ ] Remove subrequests. We don't use them
+[ ] Correct path-info when dealing with apache router.php and uri: /router.php/test/blaat.php/this/is/pathinfo?debug
+
 [ ] In directives, do we need \HTRouter\Request $request or does the variableContainer (getConfig()) suffice?)
+[ ] refactor explode() into preg_split()  (why is that again?)
+[ ] Add default fallback module for authentication (really needed?)
+[ ] Trimming should be done by config parser, not the actual modules

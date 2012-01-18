@@ -105,7 +105,6 @@ class HTRouter {
         $this->_populateInitialRequest($request);
     }
 
-
     /**
      * This is the main entrypoint that routes everything. The module hooks will take care of finding
      * and parsing .htaccess files correctly (i hope).
@@ -655,22 +654,6 @@ class HTRouter {
     function unsetEnvironment($key) {
         unset($this->_env[$key]);
     }
-
-
-//    function prepareContainerForSubRequest($url) {
-//        $subrequest = clone ($this->_container->getRequest());
-//        $subrequest->setMainRequest(false);
-//        $subrequest->setUri($url);
-//        $subrequest->setFilename(null);
-//
-//        $subContainer = clone ($this->_container);
-//        //$subContainer->name = $this->_container->name . " (SubRequest)";
-//        //$subContainer->setConfig($this->_container->getRouter()->getDefaultConfig());
-//        $subContainer->setRequest($subrequest);
-//
-//
-//        return $subContainer;
-//    }
 
 
     function getServerSoftware() {

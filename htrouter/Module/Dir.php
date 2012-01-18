@@ -60,7 +60,8 @@ class Dir extends Module {
         // In case a subrequest throws an error
         $error_notfound = false;
 
-        $subContainer = $this->getRouter()->prepareContainerForSubRequest($url);
+        // @TODO: Sub requests are done more often, we should move this to doSubRequest() in \HTRouter
+        $subContainer = $this->_prepareContainerForSubRequest($url);
         $processor = new \HTRouter\Processor($subContainer);
         $status = $processor->processRequest();
         $subrequest = $subContainer->getRequest();
@@ -95,9 +96,8 @@ class Dir extends Module {
     protected function _fixup_dir(\HTRouter\Request $request) {
         $utils = new \HTRouter\Utils;
 
-        $url = $request->getUri();
-
         // Check if it doesn't end on a slash?
+        $url = $request->getUri();
         if (!empty($url) and ($url[strlen($url)-1] != '/')) {
             // We are fixing a directory and we aren't allowed to add a slash. No good.
             if ($this->getConfig()->get("DirectorySlash") == false) {
@@ -123,7 +123,7 @@ class Dir extends Module {
         foreach ($names as $name) {
             $url = $this->_updateUrl($request->getUri(), $name);
 
-            $subContainer = $this->getRouter()->prepareContainerForSubRequest($url);
+            $subContainer = $this->_prepareContainerForSubRequest($url);
             $processor = new \HTRouter\Processor($subContainer);
             $status = $processor->processRequest();
             $subrequest = $subContainer->getRequest();
@@ -159,7 +159,9 @@ class Dir extends Module {
 
         if (empty($filename) || is_dir($request->getDocumentRoot() . $filename)) {
             return $this->_fixup_dir($request);
-        } elseif (! empty($filename) && ! file_exists($request->getDocumentRoot() . $filename)) { // @TODO: This must be different FILE_NOT_EXIST
+        } elseif (! empty($filename) && ! file_exists($request->getDocumentRoot() . $filename) &&
+            @filetype($request->getDocumentRoot() . $filename) == "unknown"
+        ) { // @TODO: This must be different FILE_NOT_EXIST
             return $this->_fixup_dflt($request);
         }
 
@@ -180,8 +182,24 @@ class Dir extends Module {
         return $url;
     }
 
+
+    protected function _prepareContainerForSubRequest($url) {
+        $subrequest = clone ($this->_container->getRequest());
+        $subrequest->setMainRequest(false);
+        $subrequest->setUri($url);
+        $subrequest->setFilename(null);
+
+        $subContainer = clone ($this->_container);
+        //$subContainer->name = $this->_container->name . " (SubRequest)";
+        //$subContainer->setConfig($this->_container->getRouter()->getDefaultConfig());
+        $subContainer->setRequest($subrequest);
+
+        return $subContainer;
+    }
+
+
     public function getAliases() {
-        return array("mod_dir.c", "mod_dir");
+        return array("mod_dir.c", "mod_dir", "dir");
     }
 
 }
