@@ -7,6 +7,8 @@ spl_autoload_register("htrouter_autoloader");
 
 include "apache.php";
 
+
+// @TODO: PSR-0?
 function htrouter_autoloader($class) {
 
     // We need to strip HTROUTER\\ namespace

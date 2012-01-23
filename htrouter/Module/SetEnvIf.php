@@ -21,9 +21,6 @@ class SetEnvIf extends Module {
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_HEADER_PARSER, array($this, "matchHeaders"));
         $router->registerHook(\HTRouter::HOOK_POST_READ_REQUEST, array($this, "matchHeaders"));
-
-//        // Set default values
-//        $this->getConfig()->set("SetEnvIf", array());
     }
 
     public function BrowserMatchDirective(\HTRouter\Request $request, $line) {

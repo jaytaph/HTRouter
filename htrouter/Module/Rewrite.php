@@ -32,8 +32,6 @@ class Rewrite extends Module {
 
         // Only register the hooks that are of value to us
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixUp"), 0);
-        $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "mimeType"), 99);
-        $router->registerHook(\HTRouter::HOOK_HANDLER, array($this, "redirectHandler"));
 
         // Set default values
         $this->getConfig()->set("RewriteEngine", false);
@@ -112,27 +110,6 @@ class Rewrite extends Module {
                 $base->set("RewriteRule", $add->get("RewriteRule"));
             }
         }
-    }
-
-
-
-
-    function mimeType(\HTRouter\Request $request) {
-        // We set the mimetype last. This means that when we have N mimetype flags, only the last will be set.
-        // We do this very late so our request does not get messed up with mimetypes I guess.
-
-        // @TODO: We don't store our mimetypes inside the configuration (or do we?)
-//        $mimeType = $this->getConfig()->get("TempMimeType");
-//        if ($mimeType) {
-//            //$request->setContentType($flag->getKey());
-//        }
-//
-//        $handler = $this->getConfig()->get("TempHandler");
-//        if ($handler) {
-//            throw new \Exception("We cannot set handler");
-//        }
-
-        return \HTRouter::STATUS_DECLINED;
     }
 
 
@@ -286,9 +263,6 @@ nextloop:
                     // Rewrite to the same name. Prevent deadlocks
                     return \HTRouter::STATUS_HTTP_OK;
                 }
-
-                //$request->setFilename("redirect:".$request->getFilename());
-                //$request->setHandler("redirect-handler");
             }
         } else {
             $request->getFilename($oldFilename);
@@ -305,31 +279,6 @@ nextloop:
         return (isset($tmp['schema'])) ? strlen($tmp['schema']) : 0;
     }
 
-
-
-    function redirectHandler(\HTRouter\Request $request) {
-        if ($request->getHandler() != "redirect-handler") {
-            return \HTRouter::STATUS_DECLINED;
-        }
-
-        if (substr($request->getFilename(), 0, 9) != "redirect:") {
-            return \HTRouter::STATUS_DECLINED;
-        }
-
-        $url = substr($request->getFilename(), 10);
-        if ($request->getArgs()) {
-            $url .= "?" . $request->getQueryString();
-        }
-
-        // Internal redirect
-        $subContainer = $this->_prepareContainerForSubRequest($url);
-        $processor = new \HTRouter\Processor($subContainer);
-        $status = $processor->processRequest();
-        $subrequest = $subContainer->getRequest();
-        $subrequest->setStatus($status);
-
-        return \HTRouter::STATUS_OK;
-    }
 
     protected function _prepareContainerForSubRequest($url) {
         $subrequest = clone ($this->_container->getRequest());

@@ -9,61 +9,6 @@ class Processor {
         $this->_container = $container;
     }
 
-//    /**
-//     * @param string $uri
-//     * @param \HTRouter\Request $request
-//     * @return HTRouter\Request SubRequest
-//     */
-//    function obsolete_subRequestLookupUri($uri, \HTRouter\Request $request) {
-//        $this->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "subRequestLookupUri($uri)");
-//
-//        // Save old info
-//        $oldRequest = $this->_container->getRequest();
-//        $oldConfig = $this->_container->getConfig();
-//
-//        // Create a new container
-//        $subRequest = $this->getRouter()->copyRequest($request);
-//        $this->_container->setRequest($subRequest);
-//        $this->_container->setConfig($this->getRouter()->getDefaultConfig());
-//
-//        $subRequest->setMethod("GET");
-//        if ($uri[0] != '/') {
-//            // Relative URI
-//            $uri = $this->getUri() . $uri;
-//        }
-//        $subRequest->setUri($uri);
-//
-//        if ($this->hasReachedRecursionLimits($subRequest)) {
-//            $subRequest->setStatus(\HTRouter::STATUS_HTTP_INTERNAL_SERVER_ERROR);
-//            return $subRequest;
-//        }
-//
-//        $status = $this->processRequest($subRequest);
-//        $subRequest->setStatus($status);
-//
-//        $this->_container->setRequest($oldRequest);
-//        $this->_container->setConfig($oldConfig);
-//        return $subRequest;
-//    }
-
-//    /**
-//     * Returns true when the number of parent sub requests found have reached a limit
-//     *
-//     * @param HTRouter\Request $request The last request in line
-//     * @return bool true when limit reached, false otherwise
-//     */
-//    function hasReachedRecursionLimits(\HTRouter\Request $request) {
-//        $level = 0;
-//        while ($request->getParentRequest()) {
-//            $level++;
-//            $request = $request->getParentRequest();
-//        }
-//
-//        return ($level > \HTrouter::MAX_RECURSION);
-//    }
-
-
-
     /**
      * The actual processing of a request, this should look somewhat similar to request.c:ap_process_request_internal()
      *
@@ -82,26 +27,17 @@ class Processor {
         $r->setUri($realUri);
 
         // We don't have a filename yet, try to find the file that corresponds to the URI we need
-//        if (! $r->isMainRequest() && ! $r->getFileName()) {
-            $status = $this->_locationWalk($r);
-            if ($status != \HTRouter::STATUS_OK) {
-                return $status;
-            }
-
-            $status = $this->getRouter()->runHook(\HTRouter::HOOK_TRANSLATE_NAME, \HTRouter::RUNHOOK_FIRST, $this->_container);
-            if ($status != \HTRouter::STATUS_OK) {
-                return $this->_declDie($status, "translate", $r);
-            }
-//        }
-
-        // @TODO: Set per_dir_config to defaults, is this still needed?
-
-        $status = $this->getRouter()->runHook(\HTRouter::HOOK_MAP_TO_STORAGE, \HTRouter::RUNHOOK_FIRST, $this->_container);
+        $status = $this->_locationWalk($r);
         if ($status != \HTRouter::STATUS_OK) {
             return $status;
         }
 
-        // Rerun location walk (@TODO: Find out why)
+        $status = $this->getRouter()->runHook(\HTRouter::HOOK_TRANSLATE_NAME, \HTRouter::RUNHOOK_FIRST, $this->_container);
+        if ($status != \HTRouter::STATUS_OK) {
+            return $this->_declDie($status, "translate", $r);
+        }
+
+        $status = $this->getRouter()->runHook(\HTRouter::HOOK_MAP_TO_STORAGE, \HTRouter::RUNHOOK_FIRST, $this->_container);
         if ($status != \HTRouter::STATUS_OK) {
             return $status;
         }

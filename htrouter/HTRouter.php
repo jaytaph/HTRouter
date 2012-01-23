@@ -1,8 +1,8 @@
 <?php
 
 class HTRouter {
-    const HTACCESS_FILE = "htaccess";
-    const CONFIG_FILE = "../public/htrouter.ini";
+    const HTACCESS_FILE = ".htaccess";      // Default .htaccess filename
+    const HTCONFIG_ENV = "HTROUTER_CONFIG";     // Ini configuration
 
     // All registered directives
     protected $_directives = array();
@@ -89,8 +89,10 @@ class HTRouter {
         // Set router
         $this->_container->setRouter($this);
 
-        // Main router htrouter.ini configuration
-        $this->_container->setRouterConfig($this->_readConfig(__DIR__.'/'.self::CONFIG_FILE));
+        // Read router configuration (if any)
+        if (getenv(self::HTCONFIG_ENV)) {
+            $this->_container->setRouterConfig($this->_readConfig(getenv(self::HTCONFIG_ENV)));
+        }
 
         // The logger class
         $this->_container->setLogger(new \HTRouter\Logger($this->_container));
@@ -118,11 +120,12 @@ class HTRouter {
      * and parsing .htaccess files correctly (i hope).
      */
     public function route() {
+        $request = $this->_getRequest();
 
         // Do actual running
         $processor = new \HTRouter\Processor($this->_container);
         $status = $processor->processRequest();
-        $this->_getRequest()->setStatus($status);
+        $request->setStatus($status);
 
         // All done. But we need to do a final check to see which (output)handler we need to fetch (not really used)
         $this->runHook(self::HOOK_HANDLER, self::RUNHOOK_ALL, $this->_container);
@@ -130,44 +133,22 @@ class HTRouter {
         // Set our $_SERVER variables correctly according to our new request information
         $this->_modifySuperGlobalServerVars();
 
-        // Output data
-        if (isset($_GET['debug'])) {
-            // @TODO: remove this. There is something seriously wrong with me....
-            print "<hr>";
-            print "We are done. Status <b>".$this->_getRequest()->getStatus()."</b>. ";
-
-            if ($this->_getRequest()->getStatus() == \HTRouter::STATUS_HTTP_OK) {
-                // @TODO Return as closure?
-                $path = $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename();
-
-                print "The file we need to include is : " . $path ."<br>\n";
-            } else {
-                print "We do not need to include a file but do something else: ".$this->_getRequest()->getStatusLine()."<br>\n";
-                print "Our outgoing headers: ";
-                print "<pre>";
-                print_r ($this->_getRequest()->getOutHeaders());
-            }
-
-            print "<h2>Server</h2><pre>";
-            print_r ($_SERVER);
-
-            print "<h2>Request</h2><pre>";
-            print_r($this->_getRequest());
-            exit;
-        }
-
         // Output
-        $r = $this->_getRequest();
-        header($r->getProtocol()." ".$r->getStatus()." ".$r->getStatusLine());
-        foreach ($r->getOutHeaders() as $k => $v) {
+        header($request->getProtocol()." ".$request->getStatus()." ".$request->getStatusLine());
+        foreach ($request->getOutHeaders() as $k => $v) {
             header("$k: $v");
         }
 
         // Include file
-        if ($this->_getRequest()->getFilename()) {
+        if ($request->getStatus() == self::STATUS_HTTP_OK) {
             $path = $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename();
             $closure = function ($path) { require_once($path); };
             $closure($path);
+        }
+
+
+        if ($request->getStatus() >= 400) {
+            $this->_print_error($request);
         }
         exit;
     }
@@ -285,12 +266,6 @@ class HTRouter {
         $this->_defaultConfig = $this->_container->getconfig();
     }
 
-    /**
-     * Cleanup stuff, if needed
-     */
-    protected function _fini() {
-        // Cleanup
-    }
 
     /**
      * Register a directive, a keyword that can be read from htaccess file
@@ -561,22 +536,6 @@ class HTRouter {
         $this->_getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Populating new request done");
     }
 
-//    /**
-//     * Copies a request into a new (sub)request. Also takes care of additional handlers/hooks
-//     *
-//     * @param HTRouter\Request $request
-//     * @return HTRouter\Request The new copied request
-//     */
-//    function copyRequest(\HTRouter\Request $request) {
-//        $new = new \HTRouter\Request($request);
-//        $new->mergeVariables($request);
-//
-//        // Let SetEnvIf etc do their thing, again
-//        $this->runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL, $this->_container);
-//
-//        return $new;
-//    }
-
     /**
      * Read INI configuration
      *
@@ -649,14 +608,6 @@ class HTRouter {
         return $this->_modules;
     }
 
-//    function prepareContainerForSubRequest($url) {
-//        $subrequest = clone ($this->_container->getRequest());
-//        $subrequest->setMainRequest(false);
-//        $subrequest->setUri($url);
-//        $subrequest->setFilename(null);
-//        return $subrequest;
-//    }
-
     function getEnvironment($key = null) {
         if (! $key) return $this->_env;
         return isset($this->_env[$key]) ? $this->_env[$key] : false;
@@ -679,6 +630,34 @@ class HTRouter {
 
     function getLogger() {
         return $this->_container->getLogger();
+    }
+
+
+    /**
+     * Outputs an error message generated from the current request.
+     *
+     * @param HTRouter\Request $request
+     */
+    protected function _print_error(\HTRouter\Request $request) {
+        echo <<< EOH
+<html>
+<head>
+  <title>HTRouter error code: {$request->getStatus()} - {$request->getStatusLine()} </title>
+</head>
+
+<body>
+  <h1>{$request->getStatus()} - {$request->getStatusLine()}</h1>
+
+  <table>
+    <tr><td>Uri</td><td>:</td><td>{$request->getUri()}<td></tr>
+    <tr><td>DocRoot</td><td>:</td><td>{$request->getDocumentRoot()}<td></tr>
+    <tr><td>Filename</td><td>:</td><td>{$request->getFilename()}<td></tr>
+  </table>
+</body>
+</html>
+
+EOH;
+
     }
 
 }

@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Emulates the apache functionality. Does not do everything correctly yet.
+ * Emulates the apache functionality. Needed because the PHP router does not
+ * have this functionality. Does not do everything correctly yet.
  */
 
 // Check if apache extension is loaded, if not emulate the functionality

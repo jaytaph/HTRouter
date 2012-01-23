@@ -4,9 +4,9 @@
 @unlink('htrouter.phar');
 $phar = new Phar('htrouter.phar', 0, 'htrouter.phar');
 
-$basePath = realpath(dirname(__FILE__)."/..");
+$basePath = realpath(dirname(__FILE__)."/../htrouter");
 $phar->buildFromDirectory($basePath, '/\.php$/');
 
 // Add stub
-$phar->setStub($phar->createDefaultStub('/public/router.php', '/public/router.php'));
+$phar->setStub($phar->createDefaultStub('boot.php', 'boot.php'));
 

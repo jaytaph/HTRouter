@@ -1,9 +1,17 @@
-[.] Fix module mod_rewrite
+[ ] Make sure rewrite rules are working correctly
+[ ] Make Rewrite conditions work
+[ ] Check if all rewrite flags are working
+
+[ ] Create unit-test environment so we can test if things work
+
+[ ] Update documentation
+[ ] Update unittests
+
 [ ] Remove subrequests. We don't use them (maybe dir.c uses it?)
 [ ] Condition / _expandTestString needs to be fixed
 [ ] Correct path-info when dealing with apache router.php and uri: /router.php/test/blaat.php/this/is/pathinfo?debug
 
 [ ] In directives, do we need \HTRouter\Request $request or does the variableContainer (getConfig()) suffice?)
-[ ] refactor explode() into preg_split()  (why is that again?)
+[ ] refactor explode() into preg_split()  (better handling of spaces)
 [ ] Add default fallback module for authentication (really needed?)
 [ ] Trimming should be done by config parser, not the actual modules

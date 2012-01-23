@@ -69,25 +69,9 @@ class Rule {
         $this->_conditions[] = $condition;
     }
 
-    public function getCondititions() {
+    public function getConditions() {
         return $this->_conditions;
     }
-
-//    /**
-//     * Returns true if the rule matches, false otherwise. We don't mind non-deterministic conditions like TIME_*
-//     *
-//     * @return bool
-//     */
-//    public function matches(\HTRouter\Request $ctx) {
-//        $this->_request = $ctx;
-//
-//        if ($this->_match == null) {
-//            // Cache it
-//            $this->_match = $this->_checkMatch();
-//        }
-//
-//        return $this->_match;
-//    }
 
     protected function _parsePattern($pattern) {
         if ($pattern[0] == "!") {
@@ -287,10 +271,10 @@ class Rule {
     function rewrite(\HTRouter\Request $request) {
         $this->_request = $request;
 
+        // Create default return object
         $result = new Result;
         $result->vary = array();
-
-        print "Rewrite : ".(string)$this."<br>";
+        $result->rc = \HTRouter::STATUS_OK;
 
         $utils = new \HTRouter\Utils();
 
@@ -329,7 +313,6 @@ class Rule {
         }
 
         if ($this->_substitutionType == self::TYPE_SUB) {
-//            $uri = $this->expandSubstitions($this->_substitution, $matches);
             $uri = $this->expandSubstitutions($this->_substitution, null);
 
             $src_url = parse_url($request->getUri());
@@ -372,18 +355,6 @@ class Rule {
         // @TODO: It should be a sub_none or sub type. Must be changed later
         throw new \LogicException("We should not be here!");
     }
-//
-//    function getRuleMatches() {
-//        // Check if pattern matches
-//        $regex = "|".$this->_pattern."|";       // Don't separate with / since it will be used a path delimiter
-//        if ($this->hasFlag(Flag::TYPE_NOCASE)) {
-//            $regex .= "i";
-//        }
-//        preg_match_all($regex, $this->getRequest()->getUri(), $matches);
-//        return $matches;
-//    }
-
-
 
 
     /**
@@ -399,7 +370,7 @@ class Rule {
 
         $router = \HTrouter::getInstance();
 
-        // match rules ($1 etc)
+        // Do backref matching on rewriterule ($1-$9)
         preg_match_all('|\$([1-9])|', $string, $matches);
         foreach ($matches[1] as $index) {
             if (!isset($this->_ruleMatches[$index])) {
@@ -408,7 +379,7 @@ class Rule {
             $string = str_replace ("\$$index", $this->_ruleMatches[$index], $string);
         }
 
-        // match conditions (%1 etc)
+        // Do backref matching on the last rewritecond (%1-%9)
         if ($condition !== null) {
             preg_match_all('|\%([1-9])|', $string, $matches);
             foreach ($matches[1] as $index) {
@@ -419,6 +390,7 @@ class Rule {
             }
         }
 
+        // Do variable substitution
         $string = str_replace("%{HTTP_USER_AGENT}", $request->getServerVar("HTTP_USER_AGENT"), $string);
         $string = str_replace("%{HTTP_REFERER}", $request->getServerVar("HTTP_REFERER"), $string);
         $string = str_replace("%{HTTP_COOKIE}", $request->getServerVar("HTTP_COOKIE"), $string);

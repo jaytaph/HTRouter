@@ -8,6 +8,10 @@ namespace HTRouter\Module\Auth;
 
 class Digest extends \HTRouter\AuthModule {
 
+    /**
+     * @param \HTRouter $router
+     * @param \HTRouter\HTDIContainer $container
+     */
     public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
         parent::init($router, $container);
@@ -16,6 +20,10 @@ class Digest extends \HTRouter\AuthModule {
         $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateDigestUser"));
     }
 
+    /**
+     * @param \HTRouter\Request $request
+     * @return int
+     */
     public function authenticateDigestUser(\HTRouter\Request $request) {
         /**
          * @var $plugin \HTRouter\AuthModule
@@ -32,10 +40,16 @@ class Digest extends \HTRouter\AuthModule {
         return \HTRouter::STATUS_DECLINED;
     }
 
+    /**
+     * @return string
+     */
     public function getName() {
         return "Digest";
     }
 
+    /**
+     * @return array
+     */
     public function getAliases() {
         return array("mod_auth_digest.c", "auth_digest");
     }

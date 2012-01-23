@@ -21,9 +21,6 @@ class Alias extends Module {
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_TRANSLATE_NAME, array($this, "translateName"));
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "fixups"));
-
-//        // Set default values
-//        $container->getConfig()->set("Redirects", array());
     }
 
     public function mergeConfigs(\HTRouter\VarContainer $base, \HTRouter\VarContainer $add) {

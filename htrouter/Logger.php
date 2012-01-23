@@ -58,9 +58,6 @@ class Logger {
         // Always store the error
         $this->_logs[] = $level.": ".$error;
 
-        // @TODO: Remove me
-        print "&bull;<b>Logline: <font color=#4169e1>. $error</font></b><br>";
-
         // No need to lpg this
         if ($level < $this->_logLevel) return;
 

@@ -93,7 +93,6 @@ class Core extends Module {
         // From this point, we know that the filename is the one we need. So we can check
         // for existence.
         $path = $request->getDocumentRoot() . $request->getFilename();
-        print "Looking for: ".$path."<br>";
 
         if (is_dir($path)) {
             // Is it a directory. We are not allowed to view it!
@@ -201,7 +200,6 @@ class Core extends Module {
         // Iterate directories and find htaccess files
         foreach ($dirs as $dir) {
             $htaccessPath = $dir ."/".$htaccessFilename;
-            print "\n\n<b>HTACCESS found at $htaccessPath ? : ".(is_readable($htaccessPath) ? "yes" : "no")."</b><br>\n";
 
             if (is_readable($htaccessPath)) {
                 // Read HTACCESS and merge information

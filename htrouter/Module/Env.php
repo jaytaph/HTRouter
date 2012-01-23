@@ -19,11 +19,6 @@ class Env extends Module {
 
         // Register hooks
         $router->registerHook(\HTRouter::HOOK_FIXUPS, array($this, "envFixup"));
-
-//        // Set default values
-//        $this->getConfig()->set("PassEnv", array());
-//        $this->getConfig()->set("SetEnv", array());
-//        $this->getConfig()->set("UnsetEnv", array());
     }
 
     public function PassEnvDirective(\HTRouter\Request $request, $line) {

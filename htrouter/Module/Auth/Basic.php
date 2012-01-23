@@ -9,6 +9,10 @@ namespace HTRouter\Module\Auth;
 
 class Basic extends \HTRouter\AuthModule {
 
+    /**
+     * @param \HTRouter $router
+     * @param \HTRouter\HTDIContainer $container
+     */
     public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
         parent::init($router, $container);
@@ -17,6 +21,10 @@ class Basic extends \HTRouter\AuthModule {
         $router->registerHook(\HTRouter::HOOK_CHECK_USER_ID, array($this, "authenticateBasicUser"));
     }
 
+    /**
+     * @param \HTRouter\Request $request
+     * @return array|int
+     */
     public function authenticateBasicUser(\HTRouter\Request $request) {
         /**
          * @var $plugin \HTRouter\AuthModule
@@ -111,10 +119,16 @@ class Basic extends \HTRouter\AuthModule {
         return explode(":", $auth_params, 2);
     }
 
+    /**
+     * @return string
+     */
     public function getName() {
         return "Basic";
     }
 
+    /**
+     * @return array
+     */
     public function getAliases() {
         return array("mod_auth_basic.c", "auth_basic");
     }

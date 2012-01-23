@@ -56,6 +56,9 @@ class File Extends \HTRouter\AuthnModule {
         return \HTRouter\AuthModule::AUTH_DENIED;
     }
 
+    /**
+     * @return array
+     */
     public function getAliases() {
         return array("mod_authn_file.c", "authn_file");
     }

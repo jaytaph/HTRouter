@@ -1,4 +1,4 @@
-tl;dr: Use your plain .htaccess files on the PHP v5.4 built-in webserver.
+tl;dr: Use your plain .htaccess files on the PHP v5.4 built-in web server.
 
 HTRouter
 ========
@@ -14,6 +14,8 @@ Work in progress
 This stuff is work in progress. Although though some .htaccess functionality is already possible there is still a lot of
 work that needs to be done to implement it so it can run out of the box! This project mimics a lot of functionality of
 the Apache2 (2.2) web-server.
+
+We still need to do a lot of stuff on the mod_rewrite, and we must update the unit-tests and documentation!
 
 
 Installation
