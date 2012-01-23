@@ -5,6 +5,10 @@ namespace HTRouter\Module\Rewrite;
 use HTRouter\Module\Rewrite\Condition;
 use HTRouter\Module\Rewrite\Flag;
 
+class Result {
+    public $vary;
+    public $rc;
+}
 
 class Rule {
     const TYPE_PATTERN_UNKNOWN = 0;
@@ -16,15 +20,15 @@ class Rule {
 //    const TYPE_SUB_ABS_URL   = 3;
     const TYPE_SUB_NONE      = 4;
 
-    protected $_match = null;                // True is rule matches, false otherwise.
+    protected $_match = false;                // True is rule matches, false otherwise.
 
     protected $_conditions = array();        // All rewrite conditions in order
 
     protected $_request;
 
-    function __construct(\HTRouter\Request $request, $pattern, $substitution, $flags) {
-        $this->_request = $request;
+    protected $_ruleMatches = array();
 
+    function __construct($pattern, $substitution, $flags) {
         // Set default values
         $this->_pattern = $pattern;
         $this->_patternNegate = false;
@@ -39,6 +43,9 @@ class Rule {
         $this->_parseFlags($flags);
     }
 
+    /**
+     * @return \HTRouter\Request
+     */
     function getRequest() {
         return $this->_request;
     }
@@ -66,19 +73,21 @@ class Rule {
         return $this->_conditions;
     }
 
-    /**
-     * Returns true if the rule matches, false otherwise. We don't mind non-deterministic conditions like TIME_*
-     *
-     * @return bool
-     */
-    public function matches() {
-        if ($this->_match == null) {
-            // Cache it
-            $this->_match = $this->_checkMatch();
-        }
-
-        return $this->_match;
-    }
+//    /**
+//     * Returns true if the rule matches, false otherwise. We don't mind non-deterministic conditions like TIME_*
+//     *
+//     * @return bool
+//     */
+//    public function matches(\HTRouter\Request $ctx) {
+//        $this->_request = $ctx;
+//
+//        if ($this->_match == null) {
+//            // Cache it
+//            $this->_match = $this->_checkMatch();
+//        }
+//
+//        return $this->_match;
+//    }
 
     protected function _parsePattern($pattern) {
         if ($pattern[0] == "!") {
@@ -212,6 +221,10 @@ class Rule {
         return ($this->getFlag($type) != null);
     }
 
+    /**
+     * @param $type string
+     * @return Flag|null
+     */
     function getFlag($type) {
         foreach ($this->getFlags() as $flag) {
             /**
@@ -224,51 +237,66 @@ class Rule {
         return null;
     }
 
+    /**
+     * @return array
+     */
     function getFlags() {
         return $this->_flags;
     }
 
-    protected function _checkMatch() {
-        // Returns true if the rule match, false otherwise
-        $match = true;
-
-        // First, check conditions
-        foreach ($this->getCondititions() as $condition) {
-            /**
-             * @var $condition \HTRouter\Module\Rewrite\Condition
-             */
-
-            // Check if condition matches
-            $match = $condition->matches();
-
-            // Check if we need to AND or OR
-            if (! $match && ! $condition->hasFlag(Flag::TYPE_ORNEXT)) {
-                // Condition needs to be AND'ed, so it cannot match
-                $match = false;
-                break;
-            }
-
-            if ($match && $condition->hasFlag(Flag::TYPE_ORNEXT)) {
-                // condition needs to be OR'ed and we have already a match, no need to continue
-                $match = true;
-                break;
-            }
-        }
-
-        \HTRouter::getInstance()->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Rule match of ".(string)$this." : ".($match ? "yes" : "no"));
-        return $match;
-    }
-
+//    protected function _checkMatch() {
+//        // Returns true if the rule match, false otherwise
+//        $match = true;
+//
+//        // First, check conditions
+//        foreach ($this->getCondititions() as $condition) {
+//            $this->_lastConditition = $condition;
+//            /**
+//             * @var $condition \HTRouter\Module\Rewrite\Condition
+//             */
+//
+//            // Check if condition matches
+//            $match = $condition->matches();
+//
+//            // Check if we need to AND or OR
+//            if (! $match && ! $condition->hasFlag(Flag::TYPE_ORNEXT)) {
+//                // Condition needs to be AND'ed, so it cannot match
+//                $match = false;
+//                break;
+//            }
+//
+//            if ($match && $condition->hasFlag(Flag::TYPE_ORNEXT)) {
+//                // condition needs to be OR'ed and we have already a match, no need to continue
+//                $match = true;
+//                break;
+//            }
+//        }
+//
+//        \HTRouter::getInstance()->getLogger()->log(\HTRouter\Logger::ERRORLEVEL_DEBUG, "Rule match of ".(string)$this." : ".($match ? "yes" : "no"));
+//        return $match;
+//    }
+//
 
     /**
      * Either returns OK, DECLINED, or a HTTP status code
      *
      * @param \HTRouter\Request $request
-     * @return int
+     * @return \HTRouter\Module\Rewrite\Result
      * @throws \LogicException
      */
     function rewrite(\HTRouter\Request $request) {
+        $this->_request = $request;
+
+        $result = new Result;
+        $result->vary = array();
+
+        print "Rewrite : ".(string)$this."<br>";
+
         $utils = new \HTRouter\Utils();
+
+        $request->setUri($request->getFilename());
+
+        // Strip per directory stuff... :|
 
         // Check if pattern matches
         $regex = "|".$this->_pattern."|";       // Don't separate with / since it will be used a path delimiter
@@ -276,26 +304,36 @@ class Rule {
             $regex .= "i";
         }
         $match = (preg_match($regex, $request->getUri(), $matches) >= 1);
+        $this->_ruleMatches = $matches;
         if ($this->_patternNegate) {
             $match = ! $match;
         }
 
         // We didn't match the pattern (or negative pattern). Return unmodified url_path
         if (! $match) {
-            return \HTRouter::STATUS_OK;
+            $result->rc = \HTRouter::STATUS_OK;
+            return $result;
         }
 
+        // @TODO; Skip the conditions for now...
+//        $ret = $this->matchConditions();
+//        if (! $ret) {
+//            $result->rc = \HTRouter::STATUS_OK;
+//            return $result;
+//        }
 
         if ($this->_substitutionType == self::TYPE_SUB_NONE) {
             // This is a dash, so no need to rewrite
-            return \HTRouter::STATUS_OK;
+            $result->rc = \HTRouter::STATUS_OK;
+            return $result;
         }
 
         if ($this->_substitutionType == self::TYPE_SUB) {
 //            $uri = $this->expandSubstitions($this->_substitution, $matches);
+            $uri = $this->expandSubstitutions($this->_substitution, null);
 
             $src_url = parse_url($request->getUri());
-            $dst_url = parse_url($this->_substitution);
+            $dst_url = parse_url($uri);
             if (! isset($src_url['host'])) $src_url['host'] = "";
             if (! isset($dst_url['host'])) $dst_url['host'] = "";
 
@@ -303,27 +341,49 @@ class Rule {
             if ($dst_url['host'] != $src_url['host'] || $this->hasFlag(Flag::TYPE_REDIRECT)) {
                 $url = $utils->unparse_url($dst_url);
                 $request->appendOutHeaders("Location", $url);
-                return \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+
+                $result->rc = \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                return $result;
             }
 
             // Change url_path
-            $request->setUri($dst_url['path']);
+            $request->setFilename("/".$dst_url['path']);
+
+            // Check if we need to append our original arguments
+            if (isset($dst_url['query'])) {
+                parse_str($dst_url['query'], $newArgs);
+            } else {
+                $newArgs = array();
+            }
+            if ($this->hasFlag(Flag::TYPE_QSA)) {
+                // We need to set new flags
+                $request->setArgs(array_merge($request->getArgs(), $newArgs));
+            } else {
+                $request->setArgs($newArgs);
+            }
+
+
+
+            $result->rc = \HTRouter::STATUS_OK;
+            return $result;
         }
 
 
-        // It should be a sub_none or sub type. Must be changed later
+        // @TODO: It should be a sub_none or sub type. Must be changed later
         throw new \LogicException("We should not be here!");
     }
+//
+//    function getRuleMatches() {
+//        // Check if pattern matches
+//        $regex = "|".$this->_pattern."|";       // Don't separate with / since it will be used a path delimiter
+//        if ($this->hasFlag(Flag::TYPE_NOCASE)) {
+//            $regex .= "i";
+//        }
+//        preg_match_all($regex, $this->getRequest()->getUri(), $matches);
+//        return $matches;
+//    }
 
-    function getRuleMatches() {
-        // Check if pattern matches
-        $regex = "|".$this->_pattern."|";       // Don't separate with / since it will be used a path delimiter
-        if ($this->hasFlag(Flag::TYPE_NOCASE)) {
-            $regex .= "i";
-        }
-        preg_match_all($regex, $this->getRequest()->getUri(), $matches);
-        return $matches;
-    }
+
 
 
     /**
@@ -334,22 +394,22 @@ class Rule {
      * @return mixed
      * @throws \RuntimeException
      */
-    public function expandSubstitutions(\HTRouter\Request $request, $string, $ruleMatches = null, $condMatches = null) {
+    public function expandSubstitutions($string, \HTRouter\Module\Rewrite\Condition $condition = null) {
+        $request = $this->getRequest();
+
         $router = \HTrouter::getInstance();
 
         // match rules ($1 etc)
-        if ($ruleMatches !== null) {
-            preg_match_all('|\$([1-9])|', $string, $matches);
-            foreach ($matches[1] as $index) {
-                if (!isset($ruleMatches[$index])) {
-                    throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
-                }
-                $string = str_replace ("\$$index", $ruleMatches[$index], $string);
+        preg_match_all('|\$([1-9])|', $string, $matches);
+        foreach ($matches[1] as $index) {
+            if (!isset($this->_ruleMatches[$index])) {
+                throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
             }
+            $string = str_replace ("\$$index", $this->_ruleMatches[$index], $string);
         }
 
         // match conditions (%1 etc)
-        if ($condMatches !== null) {
+        if ($condition !== null) {
             preg_match_all('|\%([1-9])|', $string, $matches);
             foreach ($matches[1] as $index) {
                 if (!isset($condMatches[$index])) {
@@ -374,7 +434,7 @@ class Rule {
         $string = str_replace("%{REMOTE_USER}", $request->getAuthUser(), $string);
         $string = str_replace("%{REMOTE_IDENT}", "", $string);                                         // We don't support identing!
         $string = str_replace("%{REQUEST_METHOD}", $request->getMethod(), $string);
-        $string = str_replace("%{SCRIPT_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
+        $string = str_replace("%{SCRIPT_FILENAME}", $request->getFilename(), $string);
         $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);
         $string = str_replace("%{QUERY_STRING}", $request->getQueryString(), $string);
         if ($request->getAuthType()) {
@@ -404,8 +464,8 @@ class Rule {
         $string = str_replace("%{TIME}", date("YmdHis"), $string);  // %04d%02d%02d%02d%02d%02d
 
         $string = str_replace("%{API_VERSION}", $router->getServerApi(), $string);
-        $string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);
-        $string = str_replace("%{REQUEST_URI}", $request->getServerVar("REQUEST_URI"), $string);
+        //$string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);  // "GET /dir HTTP/1.1"
+        $string = str_replace("%{REQUEST_URI}", $request->getUri(), $string);
         $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
         $string = str_replace("%{IS_SUBREQ}", $request->isSubRequest() ? "true" : "false", $string);
         $string = str_replace("%{HTTPS}", $request->isHttps() ? "on" : "off", $string);

@@ -7,6 +7,7 @@ namespace HTRouter;
  */
 class Request {
     protected $_mainRequest;
+    protected $_recursionLevel = 1;
 
     /**
      */
@@ -51,7 +52,7 @@ class Request {
     protected $_authorized = false;
     protected $_authType = null;
     protected $_server;
-    protected $_queryString;
+//    protected $_queryString;
     protected $_notes;
     protected $_user;
     protected $_ip;
@@ -60,6 +61,7 @@ class Request {
     protected $_documentRoot;
     protected $_mainConfig;
     protected $_https;
+    protected $_handler;
 
 
     public function setArgs($args)
@@ -320,14 +322,14 @@ class Request {
         return $this->_authUser;
     }
 
-    public function setQueryString($queryString)
-    {
-        $this->_queryString = $queryString;
-    }
+//    public function setQueryString($queryString)
+//    {
+//        $this->_queryString = $queryString;
+//    }
 
     public function getQueryString()
     {
-        return $this->_queryString;
+        return http_build_query($this->_args);
     }
 
     public function isMainRequest() {
@@ -377,6 +379,26 @@ class Request {
             return $_SERVER[$var];
         }
         return "";
+    }
+
+    public function setHandler($handler)
+    {
+        $this->_handler = $handler;
+    }
+
+    public function getHandler()
+    {
+        return $this->_handler;
+    }
+
+    public function setRecursionLevel($recursionLevel)
+    {
+        $this->_recursionLevel = $recursionLevel;
+    }
+
+    public function getRecursionLevel()
+    {
+        return $this->_recursionLevel;
     }
 
 }

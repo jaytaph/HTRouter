@@ -93,6 +93,7 @@ class Core extends Module {
         // From this point, we know that the filename is the one we need. So we can check
         // for existence.
         $path = $request->getDocumentRoot() . $request->getFilename();
+        print "Looking for: ".$path."<br>";
 
         if (is_dir($path)) {
             // Is it a directory. We are not allowed to view it!

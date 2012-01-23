@@ -32,6 +32,7 @@ class HTRouter {
     const STATUS_DECLINED                   =  -1;
     const STATUS_OK                         =   0;
     const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
+    const STATUS_HTTP_MOVED_TEMPORARILY     = 301;
     const STATUS_HTTP_MOVED_PERMANENTLY     = 302;
     const STATUS_HTTP_BAD_REQUEST           = 400;
     const STATUS_HTTP_UNAUTHORIZED          = 401;
@@ -103,15 +104,20 @@ class HTRouter {
 
         // Populate the request
         $this->_populateInitialRequest($request);
+
+        // Initialize all modules
+        $this->_initModules();
+    }
+
+    public function internalRoute($url, \HTRouter\Request $request) {
+
     }
 
     /**
-     * This is the main entrypoint that routes everything. The module hooks will take care of finding
+     * This is the main entry point that routes everything. The module hooks will take care of finding
      * and parsing .htaccess files correctly (i hope).
      */
     public function route() {
-        // Initialize all modules
-        $this->_initModules();
 
         // Do actual running
         $processor = new \HTRouter\Processor($this->_container);
@@ -132,7 +138,9 @@ class HTRouter {
 
             if ($this->_getRequest()->getStatus() == \HTRouter::STATUS_HTTP_OK) {
                 // @TODO Return as closure?
-                print "The file we need to include is : " . $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename()."<br>\n";
+                $path = $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename();
+
+                print "The file we need to include is : " . $path ."<br>\n";
             } else {
                 print "We do not need to include a file but do something else: ".$this->_getRequest()->getStatusLine()."<br>\n";
                 print "Our outgoing headers: ";
@@ -153,6 +161,13 @@ class HTRouter {
         header($r->getProtocol()." ".$r->getStatus()." ".$r->getStatusLine());
         foreach ($r->getOutHeaders() as $k => $v) {
             header("$k: $v");
+        }
+
+        // Include file
+        if ($this->_getRequest()->getFilename()) {
+            $path = $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename();
+            $closure = function ($path) { require_once($path); };
+            $closure($path);
         }
         exit;
     }
@@ -539,8 +554,6 @@ class HTRouter {
                 $request->setUri($uri);
             }
         }
-
-        $request->setQueryString($_SERVER['QUERY_STRING']);
 
         // Let SetEnvIf etc do their thing
         $this->runHook(self::HOOK_POST_READ_REQUEST, self::RUNHOOK_ALL, $this->_container);

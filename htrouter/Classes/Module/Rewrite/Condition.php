@@ -38,6 +38,8 @@ class Condition {
     protected $_condPatternType;
     protected $_condPatternNegate;
 
+    protected $_matches = array();      // The last matches found when parsing the condition
+
     /**
      * @var null|\HTRouter\Module\Rewrite\Rule
      */
@@ -48,7 +50,6 @@ class Condition {
     function __construct($testString, $condPattern, $flags) {
         // Set default values
         $this->_testString = $testString;
-        //$this->_testStringType = self::TYPE_UNKNOWN;
 
         $this->_condPattern = $condPattern;
         $this->_condPatternType = self::COND_UNKNOWN;
@@ -59,7 +60,6 @@ class Condition {
         $this->_flags = array();
 
         // Parse string and condition (throws error on fault)
-        //$this->_parseTestString($testString);
         $this->_parseCondPattern($condPattern);
         $this->_parseFlags($flags);
     }
@@ -68,10 +68,6 @@ class Condition {
         $ret = $this->_testString." ".($this->_condPatternNegate?"!":"").$this->_condPattern;
         if (count($this->_flags)) $ret .= " [".join(", ", $this->_flags)."]";
         return $ret;
-    }
-
-    function getRequest() {
-        return $this->getRule()->getRequest();
     }
 
     function linkRule(Rule $rule) {
@@ -84,37 +80,6 @@ class Condition {
         }
         return $this->_rule;
     }
-
-    protected function _parseTestString($testString) {
-//        if (preg_match('/^\$([0-9])$/', $testString, $matches)) {
-//            // Conditional rule backref?
-//            $this->_testStringType = self::TYPE_RULE_BACKREF;
-//            $this->_testString = $matches[1];
-//
-//        } elseif (preg_match('/^\%([0-9])$/', $testString, $matches)) {
-//            // Conditional rule backref?
-//            $this->_testStringType = self::TYPE_COND_BACKREF;
-//            $this->_testString = $matches[1];
-//
-//        } elseif (preg_match('/^\%\{(.+)\}$/', $testString, $matches)) {
-//            $variable = strtoupper($matches[1]);        // Include %{}
-//
-//            if (in_array($variable, $this->_specialTypes)) {
-//                $this->_testStringType = self::TYPE_SPECIAL;
-//                $this->_testString = strtoupper($testString);
-//            }
-//            if (in_array($variable, $this->_specialServer)) {
-//                $this->_testStringType = self::TYPE_SERVER;
-//                $this->_testString = strtoupper($testString);
-//            }
-//        }
-//
-//        // Check for OK test string
-//        if ($this->_testStringType == self::TYPE_UNKNOWN) {
-//            throw new \UnexpectedValueException("Unknown testString in rewriteCond found");
-//        }
-    }
-
 
     protected function _parseCondPattern($condPattern) {
         if (empty($condPattern)) {
@@ -242,37 +207,20 @@ class Condition {
         return $this->_match;
     }
 
+    function getLastMatches() {
+        return $this->_matches;
+    }
+
     /**
      * Actual workload of condition matching
      * @return bool
      */
     protected function _checkMatch() {
-        // check our match
+        // Expand our teststring
+        $rule = $this->getRule();
+        $expanded = $rule->expandSubstitutions($this->_testString, $this);
+
         $match = false;
-
-        switch ($this->_testStringType) {
-            case self::TYPE_RULE_BACKREF :
-                throw new \DomainException("Rule back references not yet supported!");
-                break;
-            case self::TYPE_COND_BACKREF :
-                throw new \DomainException("Condition back references not yet supported!");
-                break;
-            case self::TYPE_SERVER :
-                // Special and server are actually the same.
-                $expanded = $this->_expandTestString($this->_testString);
-                break;
-            case self::TYPE_SPECIAL :
-                // Special and server are actually the same.
-                $expanded = $this->_expandTestString($this->_testString);
-                break;
-                // @codeCoverageIgnoreStart
-            default :
-                throw new \DomainException("Unknown teststring type!");
-                // @codeCoverageIgnoreEnd
-        }
-
-        // Expand the test string
-        $expanded = $this->getRule()->expandSubstitutions($this->getRequest(), $this->_testString, $this->getRule()->getRuleMatches(), $this->getRule()->getLastConditionMatches());
 
         // Check expanded string against conditional Pattern
         switch ($this->_condPatternType) {
@@ -284,8 +232,11 @@ class Condition {
                     $regex .= "i";
                 }
 
+                // Check regex
                 $match = (preg_match($regex, $expanded, $matches) >= 1);
-                // @TODO: Do we need to store the matching?
+
+                // Store matches in case we need to do back references %N inside rules
+                $this->_matches = $matches;
                 break;
 
             case self::COND_LEXICAL_PRE :
