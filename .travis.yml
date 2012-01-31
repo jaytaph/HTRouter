@@ -1,3 +1,4 @@
 language: php
 phps:
   - 5.4
+script: ./tests/runtests.sh
