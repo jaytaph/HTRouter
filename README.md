@@ -1,5 +1,7 @@
 tl;dr: Use your plain .htaccess files on the PHP v5.4 built-in web server.
 
+![Travis CI Build Status](https://secure.travis-ci.org/jaytaph/HTRouter.png)
+
 HTRouter
 ========
 This is a very rudimentary setup for a router system that will mimic an Apache's .htaccess file. This way it is
