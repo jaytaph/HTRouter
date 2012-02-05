@@ -18,7 +18,7 @@ class Request {
     /**
      * This is a main or subrequest. Important in case of processing the request. Not everything should be run
      * from a subrequest for instance. We don't link subRequests though like Apache does. There is no immediate
-     * reason for this, and it would only add complexity.
+     * reason for it and it would only add complexity.
      *
      * @param $mainRequest
      */
@@ -52,7 +52,6 @@ class Request {
     protected $_authorized = false;
     protected $_authType = null;
     protected $_server;
-//    protected $_queryString;
     protected $_notes;
     protected $_user;
     protected $_ip;
@@ -66,7 +65,7 @@ class Request {
 
     public function setArgs($args)
     {
-        // Query string
+        // These arguments are used to generate the getQueryString
         $this->_args = $args;
     }
 
@@ -80,11 +79,6 @@ class Request {
         $this->_authType = $authType;
     }
 
-    // Module that authenticates: Basic | Digest
-
-    /**
-     * @return \HTRouter\AuthModule
-     */
     public function getAuthType()
     {
         return $this->_authType;
@@ -322,13 +316,11 @@ class Request {
         return $this->_authUser;
     }
 
-//    public function setQueryString($queryString)
-//    {
-//        $this->_queryString = $queryString;
-//    }
-
     public function getQueryString()
     {
+        if (! is_array($this->_args)) {
+            $this->_args = array();
+        }
         return http_build_query($this->_args);
     }
 

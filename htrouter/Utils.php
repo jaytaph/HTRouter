@@ -9,7 +9,8 @@ namespace HTRouter;
 class Utils {
 
     /**
-     * Validate an encrypted/hashed password. Handles different hash-methods
+     * Validates an encrypted/hashed password. Handles different hash-methods
+     *
      * @param $passwd
      * @param $hash
      * @return bool

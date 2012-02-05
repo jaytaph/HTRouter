@@ -8,5 +8,5 @@ $basePath = realpath(dirname(__FILE__)."/../htrouter");
 $phar->buildFromDirectory($basePath, '/\.php$/');
 
 // Add stub
-$phar->setStub($phar->createDefaultStub('boot.php', 'boot.php'));
+$phar->setStub($phar->createDefaultStub('stub.php', 'stub.php'));
 

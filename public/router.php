@@ -8,7 +8,7 @@ ob_start();
 // --------------------- %< ----------------------------
 
 // Start autoloader
-include_once (dirname(__FILE__)."/../htrouter/autoload.php");
+include_once (__DIRNAME__."/../htrouter/autoload.php");
 
 $router = HTRouter::getInstance();
 $router->route();

@@ -3,12 +3,12 @@
 namespace HTRouter\Module\Rewrite;
 
 class Condition {
-    // TestString types
-    const TYPE_UNKNOWN           = 0;
-    const TYPE_RULE_BACKREF      = 1;
-    const TYPE_COND_BACKREF      = 2;
-    const TYPE_SERVER            = 3;
-    const TYPE_SPECIAL           = 4;
+//    // TestString types
+//    const TYPE_UNKNOWN           = 0;
+//    const TYPE_RULE_BACKREF      = 1;
+//    const TYPE_COND_BACKREF      = 2;
+//    const TYPE_SERVER            = 3;
+//    const TYPE_SPECIAL           = 4;
 
     // Conditional Pattern types
     const COND_UNKNOWN           =  0;
@@ -32,7 +32,6 @@ class Condition {
                                       'TIME_YEAR','TIME_MON','TIME_DAY','TIME_HOUR','TIME_MIN','TIME_SEC','TIME_WDAY','TIME');
 
     protected $_testString;
-    protected $_testStringType;
 
     protected $_condPattern;
     protected $_condPatternType;
@@ -68,17 +67,6 @@ class Condition {
         $ret = $this->_testString." ".($this->_condPatternNegate?"!":"").$this->_condPattern;
         if (count($this->_flags)) $ret .= " [".join(", ", $this->_flags)."]";
         return $ret;
-    }
-
-    function linkRule(Rule $rule) {
-        $this->_rule = $rule;
-    }
-
-    function getRule() {
-        if ($this->_rule == null) {
-            throw new \DomainException("This condition is not yet linked to a rule");
-        }
-        return $this->_rule;
     }
 
     protected function _parseCondPattern($condPattern) {
@@ -198,10 +186,10 @@ class Condition {
      *
      * @return bool
      */
-    public function matches() {
+    public function matches($request) {
         if ($this->_match == null) {
             // Cache it
-            $this->_match = $this->_checkMatch();
+            $this->_match = $this->_checkMatch($request);
         }
 
         return $this->_match;
@@ -215,10 +203,8 @@ class Condition {
      * Actual workload of condition matching
      * @return bool
      */
-    protected function _checkMatch() {
-        // Expand our teststring
-        $rule = $this->getRule();
-        $expanded = $rule->expandSubstitutions($this->_testString, $this);
+    protected function _checkMatch($request) {
+        $expanded = Rule::expandSubstitutions($this->_testString, $request);
 
         $match = false;
 

@@ -3,6 +3,10 @@
 namespace HTRouter;
 
 /**
+ * @TODO Probably we want this as a simple observer class ?
+ */
+
+/**
  * Simple logger class
  */
 class Logger {

@@ -60,7 +60,6 @@ class Dir extends Module {
         // In case a subrequest throws an error
         $error_notfound = false;
 
-        // @TODO: Sub requests are done more often, we should move this to doSubRequest() in \HTRouter
         $subContainer = $this->_prepareContainerForSubRequest($url);
         $processor = new \HTRouter\Processor($subContainer);
         $status = $processor->processRequest();
@@ -160,8 +159,8 @@ class Dir extends Module {
         if (empty($filename) || is_dir($request->getDocumentRoot() . $filename)) {
             return $this->_fixup_dir($request);
         } elseif (! empty($filename) && ! file_exists($request->getDocumentRoot() . $filename) &&
-            @filetype($request->getDocumentRoot() . $filename) == "unknown"
-        ) { // @TODO: This must be different FILE_NOT_EXIST
+                  @filetype($request->getDocumentRoot() . $filename) == "unknown")  {
+            // @TODO: This must be different FILE_NOT_EXIST
             return $this->_fixup_dflt($request);
         }
 
@@ -190,8 +189,6 @@ class Dir extends Module {
         $subrequest->setFilename(null);
 
         $subContainer = clone ($this->_container);
-        //$subContainer->name = $this->_container->name . " (SubRequest)";
-        //$subContainer->setConfig($this->_container->getRouter()->getDefaultConfig());
         $subContainer->setRequest($subrequest);
 
         return $subContainer;

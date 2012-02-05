@@ -11,5 +11,5 @@ phpunit \
     --bootstrap phpunit-boot.php \
     -d memory_limit=-1 \
     -d display_startup_errors=0 \
-    $dir
+    $1
 

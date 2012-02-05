@@ -1,7 +1,7 @@
 <?php
 
 class HTRouter {
-    const HTACCESS_FILE = ".htaccess";      // Default .htaccess filename
+    const HTACCESS_FILE = ".htaccess";          // Default .htaccess filename
     const HTCONFIG_ENV = "HTROUTER_CONFIG";     // Ini configuration
 
     // All registered directives
@@ -22,10 +22,10 @@ class HTRouter {
     // Global environment
     protected $_env = array();
 
-    const API_VERSION       = "123.45";       // Useless API version
+    const API_VERSION       = "123.45";                       // Useless API version
     const SERVER_SOFTWARE   = "Apache/2.2.0 (HTRouter)";      // Useless server string
 
-    // Number of "subrequests" we can have maximum (prevent deadlocks)
+    // Number of "subrequests" we can have maximum (prevents endless rewrites)
     const MAX_RECURSION = 15;                   // @TODO: Must be set inside the configuration?
 
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
@@ -41,8 +41,8 @@ class HTRouter {
     const STATUS_HTTP_INTERNAL_SERVER_ERROR = 500;
 
     // Provider constants
-    const PROVIDER_AUTHN_GROUP = 10;
-    const PROVIDER_AUTHZ_GROUP = 15;
+    const PROVIDER_AUTHN_GROUP      = 10;
+    const PROVIDER_AUTHZ_GROUP      = 15;
 
     // Hook constants (not all of them are provided since we don't need them)
     const HOOK_HANDLER              = 40;
@@ -84,7 +84,6 @@ class HTRouter {
     private function __construct() {
         // Create DI container
         $this->_container = new \HTRouter\HTDIContainer();
-        //$this->_container->name = "MainRequest";
 
         // Set router
         $this->_container->setRouter($this);
@@ -109,10 +108,6 @@ class HTRouter {
 
         // Initialize all modules
         $this->_initModules();
-    }
-
-    public function internalRoute($url, \HTRouter\Request $request) {
-
     }
 
     /**
@@ -145,7 +140,6 @@ class HTRouter {
             $closure = function ($path) { require_once($path); };
             $closure($path);
         }
-
 
         if ($request->getStatus() >= 400) {
             $this->_print_error($request);
@@ -182,7 +176,7 @@ class HTRouter {
                 $method = $module[1];
                 $retval = $class->$method($container->getRequest());
 
-                // @TODO: Old style return, must be removed when everything is refactored
+                // @TODO: Old style return, can be removed when everything is refactored
                 if (! is_numeric($retval)) {
                     throw new \LogicException("Return value must be a STATUS_* constant: found in ".get_class($class)." ->$method!");
                 }

@@ -22,11 +22,6 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
     protected $_condition;
 
     /**
-     * @var HTRouter
-     */
-    protected $_router;
-
-    /**
      * @var HTRouter\Request
      */
     protected $_request;
@@ -39,75 +34,11 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
     function setUp() {
         $this->_condition = new Condition('%{REQUEST_FILENAME}', '!-f', '[NV]');
 
-        $this->_router = new \HTRouter();
-        $this->_request = new \HTrouter\Request($this->_router);
-        $this->_request->setApiVersion("12345");
-
-        $this->_rule = new Rule($this->_request, '.*\.(gif|jpg|png)$', '-', '[F]');
+        $this->_request = new \HTRouter\Request();
+        $this->_request->setFilename("foo");
+        $this->_request->setDocumentRoot("/www");
+        $this->_request->setHostname("php.unittest.org");
     }
-
-    /**
-     * @expectedException DomainException
-     */
-    function testDoesGetRequestWithoutLinkFunction() {
-        // Cannot get request when not linked to a rule
-        $this->assertNull($this->_condition->getRequest());
-    }
-
-    function testDoesGetRequestWithLinkFunction() {
-        $this->_condition->linkRule($this->_rule);
-        $this->assertEquals($this->_request, $this->_condition->getRequest());
-    }
-
-    function parseTestProvider() {
-        return array(
-            array('$0', MockCondition::TYPE_RULE_BACKREF),
-            array('$9', MockCondition::TYPE_RULE_BACKREF),
-            array('%0', MockCondition::TYPE_COND_BACKREF),
-            array('%9', MockCondition::TYPE_COND_BACKREF),
-            array('%{IS_SUBREQ}', MockCondition::TYPE_SPECIAL),
-            array('%{THE_REQUEST}', MockCondition::TYPE_SPECIAL),
-            array('%{TIME_HOUR}', MockCondition::TYPE_SERVER),
-            array('%{SERVER_ADDR}', MockCondition::TYPE_SERVER),
-        );
-    }
-    function parseTestProviderExceptions() {
-        return array(
-            array('', MockCondition::TYPE_RULE_BACKREF),
-            array('$', MockCondition::TYPE_RULE_BACKREF),
-            array('%', MockCondition::TYPE_RULE_BACKREF),
-            array('$10', MockCondition::TYPE_RULE_BACKREF),
-            array('%10', MockCondition::TYPE_RULE_BACKREF),
-            array('%{FOOBAR}', MockCondition::TYPE_COND_BACKREF),
-            array('%{}', MockCondition::TYPE_COND_BACKREF),
-            array('%{A}', MockCondition::TYPE_COND_BACKREF),
-        );
-    }
-
-    /**
-     * @dataProvider parseTestProvider
-     *
-     * @param $test
-     * @param $type
-     */
-    function testDoesParseTestStringFunction($test, $type) {
-        $condition = new MockCondition($test, "!-d", "");
-        $this->assertEquals($type, $condition->getProtectedProperty("_testStringType"));
-    }
-
-    /**
-     * @dataProvider parseTestProviderExceptions
-     * @expectedException InvalidArgumentException
-     *
-     * @param $test
-     * @param $type
-     */
-    function testDoesParseTestStringExceptionsFunction($test, $type) {
-        $condition = new MockCondition($test, "!-d", "");
-        $this->assertEquals($type, $condition->getProtectedProperty("_testStringType"));
-    }
-
-
 
 
     function parseCondPatternProvider() {
@@ -258,9 +189,9 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
             array('%{SERVER_NAME}','>somethingthatislongerthantheactualservernameexample.org',"", false),
             array('%{SERVER_NAME}','>g',"", true),
 
-            array('%{API_VERSION}', '=12345', "", true),
-            array('%{API_VERSION}', '\d+', "", true),
-            array('%{API_VERSION}', '!\d+', "", false),
+            array('%{API_VERSION}', '=123.45', "", true),
+            array('%{API_VERSION}', '[\d\.]+', "", true),
+            array('%{API_VERSION}', '![\d\.]+', "", false),
 
             array('%{SERVER_NAME}','org$',"", true),
             array('%{SERVER_NAME}','ORG$',"", false),
@@ -278,12 +209,11 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
      */
     function testDoesMatchFunction($test, $cond, $flags, $doesMatch) {
         $condition = new Condition($test, $cond, $flags);
-        $condition->linkRule($this->_rule);
 
         if ($doesMatch) {
-            $this->assertTrue($condition->matches());
+            $this->assertTrue($condition->matches($this->_request));
         } else {
-            $this->assertFalse($condition->matches());
+            $this->assertFalse($condition->matches($this->_request));
         }
     }
 
@@ -295,19 +225,18 @@ class module_rewrite_conditionTest extends PHPUnit_Framework_TestCase {
         );
     }
 
-    /**
-     * @dataProvider matchProviderExceptions
-     * @expectedException DomainException
-     *
-     * @param $test
-     * @param $cond
-     * @param $flags
-     */
-    function testDoUnsupportedMatchesThrowExceptionsFunction($test, $cond, $flags) {
-        $condition = new Condition($test, $cond, $flags);
-        $condition->linkRule($this->_rule);
-
-        $condition->matches();
-    }
+//    /**
+//     * @dataProvider matchProviderExceptions
+//     * @expectedException DomainException
+//     *
+//     * @param $test
+//     * @param $cond
+//     * @param $flags
+//     */
+//    function testDoUnsupportedMatchesThrowExceptionsFunction($test, $cond, $flags) {
+//        $condition = new Condition($test, $cond, $flags);
+//
+//        $condition->matches($this->_request);
+//    }
 
 }

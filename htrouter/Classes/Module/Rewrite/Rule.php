@@ -27,6 +27,7 @@ class Rule {
     protected $_request;
 
     protected $_ruleMatches = array();
+    protected $_condMatches = array();
 
     function __construct($pattern, $substitution, $flags) {
         // Set default values
@@ -62,8 +63,8 @@ class Rule {
      * @param Condition $condition
      */
     public function addCondition(Condition $condition) {
-        // We need this, since it's possible we need to do a back-reference to the rule from inside a condition
-        $condition->linkRule($this);
+//        // We need this, since it's possible we need to do a back-reference to the rule from inside a condition
+//        $condition->linkRule($this);
 
         // Add condition
         $this->_conditions[] = $condition;
@@ -313,7 +314,7 @@ class Rule {
         }
 
         if ($this->_substitutionType == self::TYPE_SUB) {
-            $uri = $this->expandSubstitutions($this->_substitution, null);
+            $uri = $this->expandSubstitutions($this->_substitution, $this->getRequest(), $this->_ruleMatches, $this->_condMatches);
 
             $src_url = parse_url($request->getUri());
             $dst_url = parse_url($uri);
@@ -353,41 +354,40 @@ class Rule {
 
 
         // @TODO: It should be a sub_none or sub type. Must be changed later
+        // @codeCoverageIgnoreStart
         throw new \LogicException("We should not be here!");
+        // @codeCoverageIgnoreEnd
     }
 
 
+
     /**
-     * @param \HTRouter\Request $request
+     * @static
      * @param $string
-     * @param null $ruleMatches
-     * @param null $condMatches
+     * @param \HTRouter\Request $request
+     * @param array $ruleMatches
+     * @param array $condMatches
      * @return mixed
      * @throws \RuntimeException
      */
-    public function expandSubstitutions($string, \HTRouter\Module\Rewrite\Condition $condition = null) {
-        $request = $this->getRequest();
-
-        $router = \HTrouter::getInstance();
-
+    static public function expandSubstitutions($string, \HTRouter\Request $request, $ruleMatches = array(), $condMatches = array())
+    {
         // Do backref matching on rewriterule ($1-$9)
         preg_match_all('|\$([1-9])|', $string, $matches);
         foreach ($matches[1] as $index) {
-            if (!isset($this->_ruleMatches[$index])) {
+            if (!isset($ruleMatches[$index-1])) {
                 throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
             }
-            $string = str_replace ("\$$index", $this->_ruleMatches[$index], $string);
+            $string = str_replace ("\$$index", $ruleMatches[$index-1], $string);
         }
 
         // Do backref matching on the last rewritecond (%1-%9)
-        if ($condition !== null) {
-            preg_match_all('|\%([1-9])|', $string, $matches);
-            foreach ($matches[1] as $index) {
-                if (!isset($condMatches[$index])) {
-                    throw new \RuntimeException("Want to match index $index, but nothing found in condition to match");
-                }
-                $string = str_replace ("%$index", $condMatches[$index], $string);
+        preg_match_all('|\%([1-9])|', $string, $matches);
+        foreach ($matches[1] as $index) {
+            if (!isset($condMatches[$index-1])) {
+                throw new \RuntimeException("Want to match index $index, but nothing found in condition to match");
             }
+            $string = str_replace ("%$index", $condMatches[$index-1], $string);
         }
 
         // Do variable substitution
@@ -410,9 +410,7 @@ class Rule {
         $string = str_replace("%{PATH_INFO}", $request->getPathInfo(), $string);
         $string = str_replace("%{QUERY_STRING}", $request->getQueryString(), $string);
         if ($request->getAuthType()) {
-            // @codeCoverageIgnoreStart
             $string = str_replace("%{AUTH_TYPE}", $request->getAuthType()->getName(), $string);     // Returns either Basic or Digest
-            // @codeCoverageIgnoreEnd
         } else {
             $string = str_replace("%{AUTH_TYPE}", "", $string);
         }
@@ -423,6 +421,8 @@ class Rule {
         $string = str_replace("%{SERVER_ADDR}", $request->getServerVar("SERVER_ADDR"), $string);
         $string = str_replace("%{SERVER_PORT}", $request->getServerVar("SERVER_PORT"), $string);
         $string = str_replace("%{SERVER_PROTOCOL}", $request->getServerVar("SERVER_PROTOCOL"), $string);
+
+        $router = \HTRouter::getInstance();
         $string = str_replace("%{SERVER_SOFTWARE}", $router->getServerSoftware(), $string);
 
         // Non-deterministic, but it won't change over the course of a request, even if the seconds have changed!

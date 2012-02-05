@@ -1,4 +1,4 @@
 language: php
 phps:
   - 5.4
-script: ./tests/travis.sh
+script: ./tests/travis.sh htrouter/Classes/Module

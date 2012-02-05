@@ -1,4 +1,7 @@
 <?php
+/**
+ * Very simple variable container where you can set|get|unset|append items easily.
+ */
 
 namespace HTRouter;
 
