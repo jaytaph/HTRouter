@@ -213,7 +213,7 @@ class HTRouter {
      * Initializes the modules so directives are known
      */
     protected function _initModules() {
-        $path = dirname(__FILE__)."/Module/";
+        $path = dirname(__FILE__)."/Module" . DIRECTORY_SEPARATOR ;
 
         // Read module directory and initialize all modules
         $it = new RecursiveDirectoryIterator($path);
@@ -224,6 +224,7 @@ class HTRouter {
             /**
              * @var $file SplFileInfo
              */
+
             $p = $file->getPathName();
             $p = str_replace($path, "", $p);    // Remove base path
             $p = str_replace("/", "\\", $p);    // Change / into \
