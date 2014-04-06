@@ -94,6 +94,7 @@ class Rule {
     }
 
     protected function _parseFlags($flags) {
+        $flags = trim($flags);
         if (empty($flags)) return;
 
         // Check for brackets
