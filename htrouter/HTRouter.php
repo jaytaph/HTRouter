@@ -162,13 +162,13 @@ class HTRouter {
      * @return int Status
      * @throws LogicException When something wrong happens
      */
-    function runHook($hook, $runtype = self::RUNHOOK_ALL, \HTRouter\HTDIContainer $container) {
+    function runHook($hookNumber, $runtype = self::RUNHOOK_ALL, \HTRouter\HTDIContainer $container) {
         // Check if something is actually registered to this hook.
-        if (!isset ($this->_hooks[$hook])) {
+        if (!isset ($this->_hooks[$hookNumber])) {
             return \HTRouter::STATUS_OK;
         }
 
-        foreach ($this->_hooks[$hook] as $hook) {
+        foreach ($this->_hooks[$hookNumber] as $hook) {
             // Every hook as 0 or more "modules" hooked
             foreach ($hook as $module) {
                 // Run the callback
