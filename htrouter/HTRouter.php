@@ -169,7 +169,7 @@ class HTRouter {
             return \HTRouter::STATUS_OK;
         }
 
-        foreach ($this->_hooks[$hookNumber] as $hook) {
+        foreach ($this->_hooks[$hookNumber] as $moduleGroupIndex => $hook) {
             // Every hook as 0 or more "modules" hooked
             foreach ($hook as $module) {
                 // Run the callback
