@@ -297,16 +297,15 @@ class Rule {
 
         // We didn't match the pattern (or negative pattern). Return unmodified url_path
         if (! $match) {
-            $result->rc = \HTRouter::STATUS_OK;
+            $result->rc = \HTRouter::STATUS_NO_MATCH;
             return $result;
         }
 
-        // @TODO; Skip the conditions for now...
-//        $ret = $this->matchConditions();
-//        if (! $ret) {
-//            $result->rc = \HTRouter::STATUS_OK;
-//            return $result;
-//        }
+        $conditionsPassed = $this->testConditions($request);
+        if (! $conditionsPassed) {
+            $result->rc = \HTRouter::STATUS_NO_MATCH;
+            return $result;
+        }
 
         if ($this->_substitutionType == self::TYPE_SUB_NONE) {
             // This is a dash, so no need to rewrite

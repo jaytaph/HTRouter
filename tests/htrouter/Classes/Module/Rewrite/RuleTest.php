@@ -162,7 +162,7 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
     function testRewrite001() {
         $rule = new Rule("FOO", "test.php", "");
         $result = $rule->rewrite($this->_request);
-        $this->assertEquals(0, $result->rc);
+        $this->assertEquals(HTRouter::STATUS_NO_MATCH, $result->rc);
         $this->assertEquals("foo", $this->_request->getFilename());
     }
 
@@ -217,8 +217,8 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
         $rule->addCondition(new Condition('%{SERVER_ADMIN}', '=info@example.org', ''));
         $rule->addCondition(new Condition('%{SERVER_PORT}', '=1337', ''));
         $result = $rule->rewrite($this->_request);
-        $this->assertEquals(0, $result->rc);
-        $this->assertEquals("/test.php", $this->_request->getFilename());
+        $this->assertEquals(HTRouter::STATUS_NO_MATCH, $result->rc);
+        $this->assertEquals("foo", $this->_request->getFilename());
 
         // Rule matches, since info@example.org is correct, and we need OR
         $rule = new Rule(".+", "test.php", "");

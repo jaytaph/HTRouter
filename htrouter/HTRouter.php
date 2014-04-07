@@ -31,6 +31,7 @@ class HTRouter {
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
     const STATUS_DECLINED                   =  -1;
     const STATUS_OK                         =   0;
+    const STATUS_NO_MATCH                 =   1;
     const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
     const STATUS_HTTP_MOVED_TEMPORARILY     = 301;
     const STATUS_HTTP_MOVED_PERMANENTLY     = 302;
