@@ -82,7 +82,7 @@ class HTRouter {
         // Cannot be used due to singleton
     }
 
-    private function __construct() {
+    protected function __construct() {
         // Create DI container
         $this->_container = new \HTRouter\HTDIContainer();
 
@@ -138,8 +138,15 @@ class HTRouter {
         // Include file
         if ($request->getStatus() == self::STATUS_HTTP_OK) {
             $path = $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename();
-            $closure = function ($path) { require_once($path); };
-            $closure($path);
+            if(substr($path, -4) == '.php'){
+                $closure = function ($path) { require_once($path); };
+                ob_start();
+                $closure($path);
+                $out = ob_get_clean();
+                echo $out;
+            } else {
+                return false;
+            }
         }
 
         if ($request->getStatus() >= 400) {
