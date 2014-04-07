@@ -199,6 +199,7 @@ nextloop:
              } else {
                 // We did not match
                 $matched = false;
+                $changed = false;
             }
         }
 
