@@ -44,9 +44,9 @@ class Condition {
      */
     protected $_rule = null;
 
-    protected $_match;  // True when the condition has matched before already.
+    protected $_match = null;  // True when the condition has matched before already.
 
-    function __construct($testString, $condPattern, $flags) {
+    function __construct($testString, $condPattern, $flags = '') {
         // Set default values
         $this->_testString = $testString;
 
