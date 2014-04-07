@@ -7,7 +7,7 @@ namespace HTRouter\Module;
 use HTRouter\Module;
 
 class Dir extends Module {
-    const DEFAULT_DIRECTORY_INDEX_FILE = "index.html";
+    const DEFAULT_DIRECTORY_INDEX_FILE = "index.php";
 
     public function init(\HTRouter $router, \HTRouter\HTDIContainer $container)
     {
