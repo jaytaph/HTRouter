@@ -101,7 +101,7 @@ class module_rewrite_substTest extends PHPUnit_Framework_TestCase {
     function testSubstitution_013() {
         $this->_request->setUri("blaat");
         $_SERVER['SCRIPT_FILENAME'] = "foo.php";
-        $this->assertEquals("blaat foo.php true off", Rule::expandSubstitutions("%{REQUEST_URI} %{REQUEST_FILENAME} %{IS_SUBREQ} %{HTTPS}", $this->_request));
+        $this->assertEquals("blaat /etc/apache2/htdocsblaat true off", Rule::expandSubstitutions("%{REQUEST_URI} %{REQUEST_FILENAME} %{IS_SUBREQ} %{HTTPS}", $this->_request));
     }
 
 }

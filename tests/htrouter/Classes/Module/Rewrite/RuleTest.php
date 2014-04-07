@@ -225,14 +225,16 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
         $rule->addCondition(new Condition('%{SERVER_ADMIN}', '=info@example.org', '[OR]'));
         $rule->addCondition(new Condition('%{SERVER_PORT}', '=1337', ''));
         $result = $rule->rewrite($this->_request);
-        //$this->assertTrue($rule->matches());
+//        $this->assertEquals(HTRouter::STATUS_OK, $result->rc);
+//        $this->assertEquals("/test.php", $this->_request->getFilename());
 
         // Rule matches, since both conditions are true
         $rule = new Rule(".+", "test.php", "");
         $rule->addCondition(new Condition('%{SERVER_ADMIN}', '=info@example.org', ''));
         $rule->addCondition(new Condition('%{SERVER_PORT}', '=80', ''));
         $result = $rule->rewrite($this->_request);
-        //$this->assertTrue($rule->matches());
+        $this->assertEquals(HTRouter::STATUS_OK, $result->rc);
+        $this->assertEquals("/test.php", $this->_request->getFilename());
     }
 
 
@@ -240,20 +242,42 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
     function testDoesRewriteFunction_001() {
         // /router.php
         $rule = new Rule("\.php$", "index.php", "[NC]");
-//        $this->assertEquals("index.php", $rule->rewrite("/test.php"));
-//        $this->assertEquals("index.php", $rule->rewrite("/TEST.PHP"));
+
+        $this->_request->setFilename("/test.php");
+        $rule->rewrite($this->_request);
+        $this->assertEquals("/index.php", $this->_request->getFilename());
+
+        $this->_request->setFilename("/TEST.PHP");
+        $rule->rewrite($this->_request);
+        $this->assertEquals("/index.php", $this->_request->getFilename());
     }
 
-    function testDoesRewriteFunction_002() {
-        $rule = new Rule("\.php$", "index.php", "");
-//        $this->assertEquals("index.php", $rule->rewrite("/test.php"));
-//        $this->assertEquals("/TEST.PHP", $rule->rewrite("/TEST.PHP"));
+    function testCakePHPReWriteNotEmpty() {
+        $rule = new Rule("(.*)", "app/webroot/$1", "[L]");
+
+        $this->_request->setFilename("/TEST.PHP");
+        $rule->rewrite($this->_request);
+        $this->assertEquals("/app/webroot/TEST.PHP", $this->_request->getFilename());
     }
 
     function testDoesRewriteFunction_003() {
-        $rule = new Rule("\.php$", "-", "[R=301]");
-//        $this->assertEquals("/test.php", $rule->rewrite("/test.php"));
-//        $this->assertEquals("/TEST.PHP", $rule->rewrite("/TEST.PHP"));
+        $rule = new Rule("^(.*)$", "index.php?url=$1", "[QSA,L]");
+
+        $this->_request->setFilename("/test.php");
+        $rule->rewrite($this->_request);
+        $this->assertEquals("/index.php", $this->_request->getFilename());
+        $this->assertEquals(array('url' => '/test.php'), $this->_request->getArgs());
+    }
+
+    public function testCakePHPWebrootHtacces(){
+        $rule = new Rule("^(.*)$", "index.php?url=$1", "[QSA,L]");
+        $rule->addCondition(new Condition('%{REQUEST_FILENAME}', '!-d'));
+        $rule->addCondition(new Condition('%{REQUEST_FILENAME}', '!-f'));
+
+        $this->_request->setFilename("/User/login/");
+        $rule->rewrite($this->_request);
+        $this->assertEquals("/index.php", $this->_request->getFilename());
+        $this->assertEquals(array('url' => '/User/login/'), $this->_request->getArgs());
     }
 
     function testDoesRewriteFunction_004() {

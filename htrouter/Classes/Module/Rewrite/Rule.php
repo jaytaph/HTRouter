@@ -438,7 +438,8 @@ class Rule {
         $string = str_replace("%{API_VERSION}", $router->getServerApi(), $string);
         //$string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);  // "GET /dir HTTP/1.1"
         $string = str_replace("%{REQUEST_URI}", $request->getUri(), $string);
-        $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
+        $requestFilename = $request->getServerVar("DOCUMENT_ROOT") . $request->getUri();
+        $string = str_replace("%{REQUEST_FILENAME}", $requestFilename, $string);
         $string = str_replace("%{IS_SUBREQ}", $request->isSubRequest() ? "true" : "false", $string);
         $string = str_replace("%{HTTPS}", $request->isHttps() ? "on" : "off", $string);
 
