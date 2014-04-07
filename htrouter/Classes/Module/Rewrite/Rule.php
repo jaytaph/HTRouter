@@ -445,4 +445,17 @@ class Rule {
         return $string;
     }
 
+    public function testConditions(){
+        foreach($this->_conditions as $condition){
+            /**
+             * @var Condition $condition
+             */
+            $matched = $condition->matches($this->_request);
+            if(!$matched){
+                return false;
+            }
+        }
+        return true;
+    }
+
 }
