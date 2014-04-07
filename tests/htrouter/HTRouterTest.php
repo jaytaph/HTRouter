@@ -14,6 +14,20 @@ class MockModule2 extends \HTRouter\Module {
 }
 
 class MockHTRouter extends \HTRouter {
+    private static $__instance = null;
+    public static function getInstance() {
+        if (! self::$__instance) {
+            $class = __CLASS__;
+            self::$__instance = new $class();
+        }
+        return self::$__instance;
+    }
+
+    public static function newInstance(){
+        $class = __CLASS__;
+        return new $class();
+    }
+
     function getHooks() {
         return $this->_hooks;
     }
@@ -27,13 +41,8 @@ class htrouterTest extends PHPUnit_Framework_TestCase {
     protected $_router;
 
     function setUp() {
-        $this->_router = new MockHTRouter();
+        $this->_router = MockHTRouter::getInstance();
     }
-
-    function testDoesGetRequestFunction() {
-        $this->assertInstanceOf("\HTRouter\Request", $this->_router->getRequest());
-    }
-
 
     function testDoesProvidersFunction() {
         $router = $this->_router;
