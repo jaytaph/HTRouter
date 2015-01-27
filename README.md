@@ -1,3 +1,5 @@
+**WARNING: This project is not actively maintained. I'm happy to merge PR request but I'm not able to fix any current issue myself** 
+
 tl;dr: Use your plain .htaccess files on the PHP v5.4 built-in web server.
 
 ![Travis CI Build Status](https://secure.travis-ci.org/jaytaph/HTRouter.png)
