@@ -452,7 +452,11 @@ class HTRouter {
         $request->setUser("");
 
         // Query arguments
-        parse_str($_SERVER['QUERY_STRING'], $args);
+        if (isset($_SERVER['QUERY_STRING'])) {
+            parse_str($_SERVER['QUERY_STRING'], $args);
+        } else {
+            $args = array();
+        }
         $request->setArgs($args);
 
         $request->setContentEncoding("");
