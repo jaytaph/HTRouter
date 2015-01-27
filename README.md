@@ -22,11 +22,20 @@ We still need to do a lot of stuff on the mod_rewrite, and we must update the un
 
 Installation
 ------------
-The software is packaged as a PHAR file. This means the whole setup can be run by the following:
 
-* Download the PHAR file (htrouter.phar) or build by running phar/buildphar.php
-* $ php -S 0.0.0.0:80 -t /var/www path/to/htrouter.phar
+The software is packaged as a PHAR file, which can be build by:
 
+ 1. Check in your `php.ini` that `phar.readonly = Off`
+ 2. Build the phar:
+
+        $ git clone https://github.com/jaytaph/HTRouter.git
+        $ php HTRouter/phar/buildphar.php
+
+ 3. You may now revert `phar.readonly` in your `php.ini`
+
+Usage
+
+ * $ php -S 0.0.0.0:80 -t /var/www htrouter.phar
 
 Warning
 =======
