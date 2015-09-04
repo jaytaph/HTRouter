@@ -74,7 +74,7 @@ class Processor {
      * Do the authentication part of the request processing. It's a bit more complicated as the rest, so
      * we moved it into a separate method.
      *
-     * @param \HTRouter\HTRouter\Request|\HTRouter\Request $request
+     * @param \HTRouter\Request|\HTRouter\Request $request
      * @return int Status
      */
     protected function _authenticate(\HTRouter\Request $request) {
@@ -141,7 +141,7 @@ class Processor {
     /**
      * Do a location walk to check if we are still OK on the location (i guess)...
      *
-     * @param \HTRouter\HTRouter\Request|\HTRouter\Request $request
+     * @param \HTRouter\Request|\HTRouter\Request $request
      * @return int Returns OK
      */
     protected function _locationWalk(\HTRouter\Request $request) {
@@ -156,7 +156,7 @@ class Processor {
      *
      * @param int $status The status code to check
      * @param string $str Logstring
-     * @param \HTRouter\HTRouter\Request|\HTRouter\Request $request The request (for logging)
+     * @param \HTRouter\Request|\HTRouter\Request $request The request (for logging)
      * @return int status code
      */
     protected function _declDie($status, $str, \HTRouter\Request $request) {
