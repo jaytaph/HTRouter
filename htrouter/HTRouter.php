@@ -20,7 +20,7 @@ class HTRouter {
     protected $_defaultConfig;
 
     // Global environment
-    protected $_env = array();
+    protected $_env = false;
 
     const API_VERSION       = "123.45";                       // Useless API version
     const SERVER_SOFTWARE   = "Apache/2.2.0 (HTRouter)";      // Useless server string

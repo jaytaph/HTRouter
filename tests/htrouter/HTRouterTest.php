@@ -118,4 +118,42 @@ class htrouterTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals("callback4", $a['baz'][10][0][0]);
     }
 
+    function testDoesEnvironmentFunction() {
+        $router = $this->_router;
+
+        // No environment set by default
+        $a = $router->getEnvironment();
+        $this->assertFalse($a);
+
+        // Add item
+        $router->setEnvironment("foo", "bar");
+        $a = $router->getEnvironment();
+
+        $this->assertCount(1, $a);
+        $this->assertArrayHasKey("foo", $a);
+        $this->assertEquals("bar", $a['foo']);
+
+        // Add more items
+        $router->setEnvironment("foo2", "bar2");
+        $router->setEnvironment("foo3", "bar3");
+
+        $a = $router->getEnvironment();
+        $this->assertCount(3, $a);
+        $this->assertArrayHasKey("foo", $a);
+        $this->assertArrayHasKey("foo2", $a);
+        $this->assertArrayHasKey("foo3", $a);
+        $this->assertEquals("bar3", $a['foo3']);
+
+        // Unset item
+        $router->unsetEnvironment("foo2");
+        $a = $router->getEnvironment();
+        $this->assertCount(2, $a);
+        $this->assertArrayNotHasKey("foo2", $a);
+
+        // Remove not existing item does noting
+        $router->unsetEnvironment("foo5");
+        $a = $router->getEnvironment();
+        $this->assertCount(2, $a);
+    }
+
 }

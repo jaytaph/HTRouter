@@ -9,49 +9,11 @@ class requestTest extends PHPUnit_Framework_TestCase {
         $this->_request = new \HTRouter\Request($this->_router);
     }
 
-//    function testDoesEnvironmentFunction() {
-//        $request = $this->_request;
-//
-//        // No environment set by default
-//        $a = $request->getEnvironment();
-//        $this->assertFalse($a);
-//
-//        // Add item
-//        $request->appendEnvironment("foo", "bar");
-//        $a = $request->getEnvironment();
-//
-//        $this->assertCount(1, $a);
-//        $this->assertArrayHasKey("foo", $a);
-//        $this->assertEquals("bar", $a['foo']);
-//
-//        // Add more items
-//        $request->appendEnvironment("foo2", "bar2");
-//        $request->appendEnvironment("foo3", "bar3");
-//
-//        $a = $request->getEnvironment();
-//        $this->assertCount(3, $a);
-//        $this->assertArrayHasKey("foo", $a);
-//        $this->assertArrayHasKey("foo2", $a);
-//        $this->assertArrayHasKey("foo3", $a);
-//        $this->assertEquals("bar3", $a['foo3']);
-//
-//        // Unset item
-//        $request->removeEnvironment("foo2");
-//        $a = $request->getEnvironment();
-//        $this->assertCount(2, $a);
-//        $this->assertArrayNotHasKey("foo2", $a);
-//
-//        // Remove not existing item does noting
-//        $request->removeEnvironment("foo5");
-//        $a = $request->getEnvironment();
-//        $this->assertCount(2, $a);
-//    }
-//
-//    function testDoesGetIpFunction() {
-//        $request = $this->_request;
-//
-//        $this->assertEquals("192.168.56.1", $request->getIp());
-//    }
+    function testDoesGetIpFunction() {
+        $request = $this->_request;
+
+        $this->assertEquals("192.168.56.1", $request->getIp());
+    }
 //
 //    function testDoesGetDocumentRootFunction() {
 //        $request = $this->_request;
