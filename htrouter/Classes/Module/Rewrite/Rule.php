@@ -379,6 +379,9 @@ class Rule {
                 throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
             }
             $string = str_replace ("\$$index", $ruleMatches[$index-1], $string);
+
+            // Remove double backslashes excluding http:// and https://
+            $string =$url = preg_replace('/([^:])(\/{2,})/', '$1/', $string);
         }
 
         // Do backref matching on the last rewritecond (%1-%9)
