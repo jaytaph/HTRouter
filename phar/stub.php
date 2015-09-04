@@ -1,6 +1,6 @@
 <?php
 //Clear out the index.php that the PHP Internal Webserver Adds...
-if(strpos("index.php", $_SERVER['REQUEST_URI']) === false && $_SERVER['SCRIPT_NAME'] == '/index.php'){
+if(strpos($_SERVER['REQUEST_URI'], "index.php") === false && $_SERVER['SCRIPT_NAME'] == '/index.php'){
     $_SERVER['SCRIPT_NAME'] = '';
     $_SERVER['PHP_SELF'] = str_replace("/index.php", "", $_SERVER['PHP_SELF']);
     $_SERVER['SCRIPT_FILENAME'] = str_replace("index.php", "", $_SERVER['SCRIPT_FILENAME']);
