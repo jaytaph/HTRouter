@@ -21,7 +21,7 @@ class module_rewrite_substTest extends PHPUnit_Framework_TestCase {
     }
 
     function testSubstitution_001() {
-        $a = array("foo", "bar", "baz");
+        $a = array("foobarbaz", "foo", "bar", "baz");
 
         //$condition = new Condition("%{HTTP_USER_AGENT}", ".+", "");
         $this->assertEquals("TESTfoo", Rule::expandSubstitutions("TEST$1", $this->_request, $a, array()));

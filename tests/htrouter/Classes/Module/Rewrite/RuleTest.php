@@ -269,17 +269,6 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(array('url' => '/test.php'), $this->_request->getArgs());
     }
 
-    public function testCakePHPWebrootHtacces(){
-        $rule = new Rule("^(.*)$", "index.php?url=$1", "[QSA,L]");
-        $rule->addCondition(new Condition('%{REQUEST_FILENAME}', '!-d'));
-        $rule->addCondition(new Condition('%{REQUEST_FILENAME}', '!-f'));
-
-        $this->_request->setFilename("/User/login/");
-        $rule->rewrite($this->_request);
-        $this->assertEquals("/index.php", $this->_request->getFilename());
-        $this->assertEquals(array('url' => '/User/login/'), $this->_request->getArgs());
-    }
-
     function testDoesRewriteFunction_004() {
         $rule = new Rule("\.asp$", "index.php", "");
 //        $this->assertEquals("/test.php", $rule->rewrite("/test.php"));
@@ -295,6 +284,25 @@ class module_rewrite_ruleTest extends PHPUnit_Framework_TestCase {
         // @TODO: We need to check if redirection works
         //$rule = new Rule("\.php$", "http://www.google.com", "[R=301]");
         //$this->assertEquals("/test.php", $rule->rewrite("/test.php"));    // Redirects!
+    }
+
+    function testDoesRewriteFunction_007() {
+        $rule = new Rule("^(.*)/$", "/$1", "[R=301, L]");
+        $this->_request->setFilename("/foo/test//2/");
+        $result = $rule->rewrite($this->_request);
+        $this->assertEquals(301, $result->rc);
+        $this->assertEquals("/foo/test/2", $this->_request->getOutHeaders("Location"));
+    }
+
+    public function testCakePHPWebrootHtacces(){
+        $rule = new Rule("^(.*)$", "index.php?url=$1", "[QSA,L]");
+        $rule->addCondition(new Condition('%{REQUEST_FILENAME}', '!-d'));
+        $rule->addCondition(new Condition('%{REQUEST_FILENAME}', '!-f'));
+
+        $this->_request->setFilename("/User/login/");
+        $rule->rewrite($this->_request);
+        $this->assertEquals("/index.php", $this->_request->getFilename());
+        $this->assertEquals(array('url' => '/User/login/'), $this->_request->getArgs());
     }
 
 }

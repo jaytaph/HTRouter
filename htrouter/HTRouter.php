@@ -512,6 +512,7 @@ class HTRouter {
 
         $request->setMethod($_SERVER['REQUEST_METHOD']);
         $request->setProtocol($_SERVER['SERVER_PROTOCOL']);
+        $request->setIp($_SERVER['REMOTE_ADDR']);
         $request->setStatus(\HTRouter::STATUS_HTTP_OK);
 
         if (! isset($_SERVER['PATH_INFO'])) {

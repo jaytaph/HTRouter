@@ -28,6 +28,10 @@ class MockHTRouter extends \HTRouter {
         return new $class();
     }
 
+    function getRequest() {
+        return $this->_getRequest();
+    }
+
     function getHooks() {
         return $this->_hooks;
     }

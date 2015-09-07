@@ -5,8 +5,8 @@ class requestTest extends PHPUnit_Framework_TestCase {
     protected $_request;
 
     function setUp() {
-        $this->_router = \HTRouter::getInstance();
-        $this->_request = new \HTRouter\Request($this->_router);
+        $this->_router = MockHTRouter::getInstance();
+        $this->_request = $this->_router->getRequest();
     }
 
     function testDoesGetIpFunction() {
@@ -14,40 +14,40 @@ class requestTest extends PHPUnit_Framework_TestCase {
 
         $this->assertEquals("192.168.56.1", $request->getIp());
     }
-//
-//    function testDoesGetDocumentRootFunction() {
-//        $request = $this->_request;
-//
-//        $this->assertEquals("/etc/apache2/htdocs", $request->getDocumentRoot());
-//    }
-//
-//    function testDoesIsHttpsFunction() {
-//        $request = $this->_request;
-//
-//        // Check if flipping works
-//        $this->assertFalse($request->isHttps());
-//        $request->setHttps(true);
-//        $this->assertTrue($request->isHttps());
-//        $request->setHttps(false);
-//        $this->assertFalse($request->isHttps());
-//
-//        // When it's not a boolean, we always return false
-//        $request->setHttps("foobar");
-//        $this->assertFalse($request->isHttps());
-//    }
-//
-//    function testDoesServerVarsFunction() {
-//        $request = $this->_request;
-//
-//        // Find item
-//        $this->assertEquals("htrouter.phpunit.example.org", $request->getServerVar("HTTP_HOST"));
-//
-//        // Make sure lowercase searching functions as well
-//        $this->assertEquals("htrouter.phpunit.example.org", $request->getServerVar("http_host"));
-//
-//        // Check empty items
-//        $this->assertEmpty($request->getServerVar("foobar"));
-//    }
+
+    function testDoesGetDocumentRootFunction() {
+        $request = $this->_request;
+
+        $this->assertEquals("/etc/apache2/htdocs", $request->getDocumentRoot());
+    }
+
+    function testDoesIsHttpsFunction() {
+        $request = $this->_request;
+
+        // Check if flipping works
+        $this->assertFalse($request->isHttps());
+        $request->setHttps(true);
+        $this->assertTrue($request->isHttps());
+        $request->setHttps(false);
+        $this->assertFalse($request->isHttps());
+
+        // When it's not a boolean, we always return false
+        $request->setHttps("foobar");
+        $this->assertFalse($request->isHttps());
+    }
+
+    function testDoesServerVarsFunction() {
+        $request = $this->_request;
+
+        // Find item
+        $this->assertEquals("htrouter.phpunit.example.org", $request->getServerVar("HTTP_HOST"));
+
+        // Make sure lowercase searching functions as well
+        $this->assertEquals("htrouter.phpunit.example.org", $request->getServerVar("http_host"));
+
+        // Check empty items
+        $this->assertEmpty($request->getServerVar("foobar"));
+    }
 //
 //
 //    function testDoesMagicAppendFunction() {

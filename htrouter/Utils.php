@@ -351,7 +351,6 @@ no_emit:
         }
 
         $path =  join("/", $newDirs);
-        var_dump($uri);
         // Hack to add last slash if needed.
         if ($uri[strlen($uri)-1] == '/' && $uri[strlen($uri)-2] !== '/' && $path != "") {
             $path .= '/';
