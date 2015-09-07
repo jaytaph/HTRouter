@@ -326,7 +326,13 @@ class Rule {
                 $url = $utils->unparse_url($dst_url);
                 $request->appendOutHeaders("Location", $url);
 
-                $result->rc = \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                if($this->hasFlag(Flag::TYPE_REDIRECT)) {
+                    $status_code = $this->getFlag(Flag::TYPE_REDIRECT)->getValue();
+
+                    $result->rc = !empty($status_code) ? $status_code : \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                }else{
+                    $result->rc = \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                }
                 return $result;
             }
 
@@ -375,13 +381,15 @@ class Rule {
         // Do backref matching on rewriterule ($1-$9)
         preg_match_all('|\$([1-9])|', $string, $matches);
         foreach ($matches[1] as $index) {
-            if (!isset($ruleMatches[$index-1])) {
+            if (!isset($ruleMatches[$index])) {
                 throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
             }
-            $string = str_replace ("\$$index", $ruleMatches[$index-1], $string);
+            $string = str_replace ("\$$index", $ruleMatches[$index], $string);
 
             // Remove double backslashes excluding http:// and https://
-            $string =$url = preg_replace('/([^:])(\/{2,})/', '$1/', $string);
+            $string = preg_replace('/([^:])(\/{2,})/', '$1/', $string);
+            // Remove double slashes at the beginning
+            $string = preg_replace('/^\/{2,}(.*)/', '/$1', $string);
         }
 
         // Do backref matching on the last rewritecond (%1-%9)
