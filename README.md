@@ -1,15 +1,16 @@
-Run CakePHP Apps from the PHP 5.4 built in webserver.
-=======
 **WARNING: This project is not actively maintained. I'm happy to merge PR request but I'm not able to fix any current issue myself** 
 
 tl;dr: Use your plain .htaccess files on the PHP v5.4 built-in web server.
 
+![Travis CI Build Status](https://secure.travis-ci.org/jaytaph/HTRouter.png)
 
 HTRouter
 ========
-This is a modified version of jaytaph's HTRouter.  It is still very rudimentary.  But has been altered to work with CakePHP Apps, on Windows.
+This is a very rudimentary setup for a router system that will mimic an Apache's .htaccess file. This way it is
+possible to use a .htaccess file together with the PHP 5.4's built-in web server.
 
-It may allow other apps to function as well.
+The whole idea will be that we should be able to run any framework or system that normally depends on .htaccess
+configuration, which mostly is the rewrite parts and maybe some authentication/authorization.
 
 
 Work in progress
@@ -23,13 +24,6 @@ We still need to do a lot of stuff on the mod_rewrite, and we must update the un
 
 Installation
 ------------
-The software can be run without making a PHAR file like so:
-
-* Set working directory to webroot for cakephp app.
-* php.exe -S 0.0.0.0:8765 -t (path to webroot) HTRouter\phar\stub.php
-
-The software is frequently packaged as a PHAR file. This means the whole setup can be run by the following:
-=======
 
 The software is packaged as a PHAR file, which can be build by:
 
@@ -47,5 +41,5 @@ Usage
 
 Warning
 =======
-Don't use this instead of apache...  Even for development...  I am using this solely to provide a compact webserver for
-an app that runs behind a firewall and pushes data from a client/server application to a web-server for further processing.
+The built-in PHP web server is *NOT* meant to be a replacement for any production web server. It should used for
+development purposes only! Not following this will result in me performing my infamous "I told you so!"-dance!
