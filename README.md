@@ -1,4 +1,8 @@
 Run CakePHP Apps from the PHP 5.4 built in webserver.
+=======
+**WARNING: This project is not actively maintained. I'm happy to merge PR request but I'm not able to fix any current issue myself** 
+
+tl;dr: Use your plain .htaccess files on the PHP v5.4 built-in web server.
 
 
 HTRouter
@@ -25,10 +29,21 @@ The software can be run without making a PHAR file like so:
 * php.exe -S 0.0.0.0:8765 -t (path to webroot) HTRouter\phar\stub.php
 
 The software is frequently packaged as a PHAR file. This means the whole setup can be run by the following:
+=======
 
-* Download the PHAR file (htrouter.phar) or build by running phar/buildphar.php
-* $ php -S 0.0.0.0:80 -t /var/www path/to/htrouter.phar
+The software is packaged as a PHAR file, which can be build by:
 
+ 1. Check in your `php.ini` that `phar.readonly = Off`
+ 2. Build the phar:
+
+        $ git clone https://github.com/jaytaph/HTRouter.git
+        $ php HTRouter/phar/buildphar.php
+
+ 3. You may now revert `phar.readonly` in your `php.ini`
+
+Usage
+
+ * $ php -S 0.0.0.0:80 -t /var/www htrouter.phar
 
 Warning
 =======
