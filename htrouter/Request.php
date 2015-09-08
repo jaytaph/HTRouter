@@ -367,6 +367,7 @@ class Request {
     }
 
     public function getServerVar($var) {
+        $var = strtoupper($var);
         if (isset($_SERVER[$var])) {
             return $_SERVER[$var];
         }

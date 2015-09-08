@@ -80,6 +80,21 @@ class Rewrite extends Module {
             $args[] = "";
         }
 
+        // Change URI if RewriteBase is set
+
+        $base = $this->getConfig()->get('RewriteBase');
+
+        if(!empty($base)){
+
+            $str = $request->getFilename();
+
+            if (substr($str, 0, strlen($base)) == $base) {
+                $str = substr($str, strlen($base));
+                $request->setFilename($str);
+            }
+
+        }
+
         $rule = new Rule($args[0], $args[1], $args[2]);
         foreach ($this->getConfig()->get("TempRewriteConditions", array()) as $condition) {
             $rule->addCondition($condition);
@@ -199,6 +214,7 @@ nextloop:
              } else {
                 // We did not match
                 $matched = false;
+                $changed = false;
             }
         }
 

@@ -94,6 +94,7 @@ class Rule {
     }
 
     protected function _parseFlags($flags) {
+        $flags = trim($flags);
         if (empty($flags)) return;
 
         // Check for brackets
@@ -296,16 +297,15 @@ class Rule {
 
         // We didn't match the pattern (or negative pattern). Return unmodified url_path
         if (! $match) {
-            $result->rc = \HTRouter::STATUS_OK;
+            $result->rc = \HTRouter::STATUS_NO_MATCH;
             return $result;
         }
 
-        // @TODO; Skip the conditions for now...
-//        $ret = $this->matchConditions();
-//        if (! $ret) {
-//            $result->rc = \HTRouter::STATUS_OK;
-//            return $result;
-//        }
+        $conditionsPassed = $this->testConditions($request);
+        if (! $conditionsPassed) {
+            $result->rc = \HTRouter::STATUS_NO_MATCH;
+            return $result;
+        }
 
         if ($this->_substitutionType == self::TYPE_SUB_NONE) {
             // This is a dash, so no need to rewrite
@@ -326,7 +326,13 @@ class Rule {
                 $url = $utils->unparse_url($dst_url);
                 $request->appendOutHeaders("Location", $url);
 
-                $result->rc = \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                if($this->hasFlag(Flag::TYPE_REDIRECT)) {
+                    $status_code = $this->getFlag(Flag::TYPE_REDIRECT)->getValue();
+
+                    $result->rc = !empty($status_code) ? $status_code : \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                }else{
+                    $result->rc = \HTRouter::STATUS_HTTP_MOVED_PERMANENTLY;
+                }
                 return $result;
             }
 
@@ -375,10 +381,15 @@ class Rule {
         // Do backref matching on rewriterule ($1-$9)
         preg_match_all('|\$([1-9])|', $string, $matches);
         foreach ($matches[1] as $index) {
-            if (!isset($ruleMatches[$index-1])) {
+            if (!isset($ruleMatches[$index])) {
                 throw new \RuntimeException("Want to match index $index, but nothing found in rule to match");
             }
-            $string = str_replace ("\$$index", $ruleMatches[$index-1], $string);
+            $string = str_replace ("\$$index", $ruleMatches[$index], $string);
+
+            // Remove double backslashes excluding http:// and https://
+            $string = preg_replace('/([^:])(\/{2,})/', '$1/', $string);
+            // Remove double slashes at the beginning
+            $string = preg_replace('/^\/{2,}(.*)/', '/$1', $string);
         }
 
         // Do backref matching on the last rewritecond (%1-%9)
@@ -438,11 +449,25 @@ class Rule {
         $string = str_replace("%{API_VERSION}", $router->getServerApi(), $string);
         //$string = str_replace("%{THE_REQUEST}", $request->getTheRequest(), $string);  // "GET /dir HTTP/1.1"
         $string = str_replace("%{REQUEST_URI}", $request->getUri(), $string);
-        $string = str_replace("%{REQUEST_FILENAME}", $request->getServerVar("SCRIPT_FILENAME"), $string);
+        $requestFilename = $request->getServerVar("DOCUMENT_ROOT") . $request->getUri();
+        $string = str_replace("%{REQUEST_FILENAME}", $requestFilename, $string);
         $string = str_replace("%{IS_SUBREQ}", $request->isSubRequest() ? "true" : "false", $string);
         $string = str_replace("%{HTTPS}", $request->isHttps() ? "on" : "off", $string);
 
         return $string;
+    }
+
+    public function testConditions(){
+        foreach($this->_conditions as $condition){
+            /**
+             * @var Condition $condition
+             */
+            $matched = $condition->matches($this->_request);
+            if(!$matched){
+                return false;
+            }
+        }
+        return true;
     }
 
 }

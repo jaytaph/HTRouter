@@ -5,57 +5,8 @@ class requestTest extends PHPUnit_Framework_TestCase {
     protected $_request;
 
     function setUp() {
-        $this->_router = new \HTRouter();
-        $this->_request = new \HTRouter\Request($this->_router);
-    }
-
-    function testDoesGetRequestFunction() {
-        $this->assertInstanceof("HTRouter", $this->_request->getRouter());
-    }
-
-    function testDoesGetHeadersFunction() {
-        $a = $this->_request->getHeaders();
-        $this->assertCount(7, $a);
-        $this->assertArrayHasKey("Host", $a);
-        $this->assertEquals("htrouter.phpunit.example.org", $a['Host']);
-    }
-
-    function testDoesEnvironmentFunction() {
-        $request = $this->_request;
-
-        // No environment set by default
-        $a = $request->getEnvironment();
-        $this->assertFalse($a);
-
-        // Add item
-        $request->appendEnvironment("foo", "bar");
-        $a = $request->getEnvironment();
-
-        $this->assertCount(1, $a);
-        $this->assertArrayHasKey("foo", $a);
-        $this->assertEquals("bar", $a['foo']);
-
-        // Add more items
-        $request->appendEnvironment("foo2", "bar2");
-        $request->appendEnvironment("foo3", "bar3");
-
-        $a = $request->getEnvironment();
-        $this->assertCount(3, $a);
-        $this->assertArrayHasKey("foo", $a);
-        $this->assertArrayHasKey("foo2", $a);
-        $this->assertArrayHasKey("foo3", $a);
-        $this->assertEquals("bar3", $a['foo3']);
-
-        // Unset item
-        $request->removeEnvironment("foo2");
-        $a = $request->getEnvironment();
-        $this->assertCount(2, $a);
-        $this->assertArrayNotHasKey("foo2", $a);
-
-        // Remove not existing item does noting
-        $request->removeEnvironment("foo5");
-        $a = $request->getEnvironment();
-        $this->assertCount(2, $a);
+        $this->_router = MockHTRouter::getInstance();
+        $this->_request = $this->_router->getRequest();
     }
 
     function testDoesGetIpFunction() {
@@ -97,49 +48,49 @@ class requestTest extends PHPUnit_Framework_TestCase {
         // Check empty items
         $this->assertEmpty($request->getServerVar("foobar"));
     }
-
-
-    function testDoesMagicAppendFunction() {
-        $request = $this->_request;
-
-        // Default is ""
-        $a = $request->vars->getFoobar();
-        $this->assertEmpty($a);
-
-        // Append item
-        $request->vars->appendFoobar("baz");
-        $a = $request->vars->getFoobar();
-        $this->assertCount(1, $a);
-        $this->assertEquals("baz", $a[0]);
-    }
-
-    // @TODO: MagicGet and MagicSet are tested throughout other methods. But we should test it separately anyway
-
-
-    function testDoesMagicUnsetFunction() {
-        $request = $this->_request;
-
-        $request->vars->setFoo("bar");
-
-        $this->assertEquals("bar", $request->vars->getFoo());
-
-        $request->vars->unsetFoo();
-        $this->assertEmpty("", $request->vars->getFoo());
-    }
-
-    function testDoesMagicGetFunction() {
-        $request = $this->_request;
-
-        $this->assertEmpty("", $request->vars->getFoo());
-        $this->assertCount(0, $request->vars->getFoo(array()));
-        $this->assertFalse($request->vars->getFoo(false));
-    }
-
-    function testDoesMagicFunction() {
-        $request = $this->_request;
-
-        $a = $request->vars->foobar();
-        $this->assertNull($a);
-    }
+//
+//
+//    function testDoesMagicAppendFunction() {
+//        $request = $this->_request;
+//
+//        // Default is ""
+//        $a = $request->vars->getFoobar();
+//        $this->assertEmpty($a);
+//
+//        // Append item
+//        $request->vars->appendFoobar("baz");
+//        $a = $request->vars->getFoobar();
+//        $this->assertCount(1, $a);
+//        $this->assertEquals("baz", $a[0]);
+//    }
+//
+//    // @TODO: MagicGet and MagicSet are tested throughout other methods. But we should test it separately anyway
+//
+//
+//    function testDoesMagicUnsetFunction() {
+//        $request = $this->_request;
+//
+//        $request->vars->setFoo("bar");
+//
+//        $this->assertEquals("bar", $request->vars->getFoo());
+//
+//        $request->vars->unsetFoo();
+//        $this->assertEmpty("", $request->vars->getFoo());
+//    }
+//
+//    function testDoesMagicGetFunction() {
+//        $request = $this->_request;
+//
+//        $this->assertEmpty("", $request->vars->getFoo());
+//        $this->assertCount(0, $request->vars->getFoo(array()));
+//        $this->assertFalse($request->vars->getFoo(false));
+//    }
+//
+//    function testDoesMagicFunction() {
+//        $request = $this->_request;
+//
+//        $a = $request->vars->foobar();
+//        $this->assertNull($a);
+//    }
 
 }

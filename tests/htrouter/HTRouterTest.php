@@ -14,6 +14,24 @@ class MockModule2 extends \HTRouter\Module {
 }
 
 class MockHTRouter extends \HTRouter {
+    private static $__instance = null;
+    public static function getInstance() {
+        if (! self::$__instance) {
+            $class = __CLASS__;
+            self::$__instance = new $class();
+        }
+        return self::$__instance;
+    }
+
+    public static function newInstance(){
+        $class = __CLASS__;
+        return new $class();
+    }
+
+    function getRequest() {
+        return $this->_getRequest();
+    }
+
     function getHooks() {
         return $this->_hooks;
     }
@@ -27,13 +45,8 @@ class htrouterTest extends PHPUnit_Framework_TestCase {
     protected $_router;
 
     function setUp() {
-        $this->_router = new MockHTRouter();
+        $this->_router = MockHTRouter::getInstance();
     }
-
-    function testDoesGetRequestFunction() {
-        $this->assertInstanceOf("\HTRouter\Request", $this->_router->getRequest());
-    }
-
 
     function testDoesProvidersFunction() {
         $router = $this->_router;
@@ -107,6 +120,44 @@ class htrouterTest extends PHPUnit_Framework_TestCase {
         $router->registerHook("baz", array("callback4"), 10);
         $a = $router->getHooks();
         $this->assertEquals("callback4", $a['baz'][10][0][0]);
+    }
+
+    function testDoesEnvironmentFunction() {
+        $router = $this->_router;
+
+        // No environment set by default
+        $a = $router->getEnvironment();
+        $this->assertFalse($a);
+
+        // Add item
+        $router->setEnvironment("foo", "bar");
+        $a = $router->getEnvironment();
+
+        $this->assertCount(1, $a);
+        $this->assertArrayHasKey("foo", $a);
+        $this->assertEquals("bar", $a['foo']);
+
+        // Add more items
+        $router->setEnvironment("foo2", "bar2");
+        $router->setEnvironment("foo3", "bar3");
+
+        $a = $router->getEnvironment();
+        $this->assertCount(3, $a);
+        $this->assertArrayHasKey("foo", $a);
+        $this->assertArrayHasKey("foo2", $a);
+        $this->assertArrayHasKey("foo3", $a);
+        $this->assertEquals("bar3", $a['foo3']);
+
+        // Unset item
+        $router->unsetEnvironment("foo2");
+        $a = $router->getEnvironment();
+        $this->assertCount(2, $a);
+        $this->assertArrayNotHasKey("foo2", $a);
+
+        // Remove not existing item does noting
+        $router->unsetEnvironment("foo5");
+        $a = $router->getEnvironment();
+        $this->assertCount(2, $a);
     }
 
 }

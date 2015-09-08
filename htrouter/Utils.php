@@ -183,7 +183,7 @@ class Utils {
      * @return bool
      */
     function isUrl($url) {
-        return (parse_url($url) !== false);
+        return (filter_var($url, FILTER_VALIDATE_URL) !== false);
     }
 
 
@@ -191,7 +191,7 @@ class Utils {
         $line = strtolower($line);
 
         if (! in_array($line, array_keys($values))) {
-            throw new \OutOfBoundsException("Must be either: ". join(", ", array_keys($values)));
+            throw new \InvalidArgumentException("Must be either: ". join(", ", array_keys($values)));
         }
 
         return $values[$line];
@@ -351,9 +351,8 @@ no_emit:
         }
 
         $path =  join("/", $newDirs);
-
         // Hack to add last slash if needed.
-        if ($uri[strlen($uri)-1] == '/') {
+        if ($uri[strlen($uri)-1] == '/' && $uri[strlen($uri)-2] !== '/' && $path != "") {
             $path .= '/';
         }
         return $path;

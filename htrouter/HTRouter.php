@@ -20,7 +20,7 @@ class HTRouter {
     protected $_defaultConfig;
 
     // Global environment
-    protected $_env = array();
+    protected $_env = false;
 
     const API_VERSION       = "123.45";                       // Useless API version
     const SERVER_SOFTWARE   = "Apache/2.2.0 (HTRouter)";      // Useless server string
@@ -31,6 +31,7 @@ class HTRouter {
     // These are the status codes that needs to be returned by the hooks (for now). Boolean true|false is wrong
     const STATUS_DECLINED                   =  -1;
     const STATUS_OK                         =   0;
+    const STATUS_NO_MATCH                 =   1;
     const STATUS_HTTP_OK                    = 200;      // Everything above or equal to 100 is considered a HTTP status code
     const STATUS_HTTP_MOVED_TEMPORARILY     = 301;
     const STATUS_HTTP_MOVED_PERMANENTLY     = 302;
@@ -81,7 +82,7 @@ class HTRouter {
         // Cannot be used due to singleton
     }
 
-    private function __construct() {
+    protected function __construct() {
         // Create DI container
         $this->_container = new \HTRouter\HTDIContainer();
 
@@ -137,8 +138,15 @@ class HTRouter {
         // Include file
         if ($request->getStatus() == self::STATUS_HTTP_OK) {
             $path = $this->_getRequest()->getDocumentRoot().$this->_getRequest()->getFilename();
-            $closure = function ($path) { require_once($path); };
-            $closure($path);
+            if(substr($path, -4) == '.php'){
+                $closure = function ($path) { require_once($path); };
+                ob_start();
+                $closure($path);
+                $out = ob_get_clean();
+                echo $out;
+            } else {
+                return false;
+            }
         }
 
         if ($request->getStatus() >= 400) {
@@ -162,13 +170,13 @@ class HTRouter {
      * @return int Status
      * @throws LogicException When something wrong happens
      */
-    function runHook($hook, $runtype = self::RUNHOOK_ALL, \HTRouter\HTDIContainer $container) {
+    function runHook($hookNumber, $runtype = self::RUNHOOK_ALL, \HTRouter\HTDIContainer $container) {
         // Check if something is actually registered to this hook.
-        if (!isset ($this->_hooks[$hook])) {
+        if (!isset ($this->_hooks[$hookNumber])) {
             return \HTRouter::STATUS_OK;
         }
 
-        foreach ($this->_hooks[$hook] as $hook) {
+        foreach ($this->_hooks[$hookNumber] as $moduleGroupIndex => $hook) {
             // Every hook as 0 or more "modules" hooked
             foreach ($hook as $module) {
                 // Run the callback
@@ -213,7 +221,7 @@ class HTRouter {
      * Initializes the modules so directives are known
      */
     protected function _initModules() {
-        $path = dirname(__FILE__)."/Module/";
+        $path = dirname(__FILE__)."/Module" . DIRECTORY_SEPARATOR ;
 
         // Read module directory and initialize all modules
         $it = new RecursiveDirectoryIterator($path);
@@ -224,6 +232,7 @@ class HTRouter {
             /**
              * @var $file SplFileInfo
              */
+
             $p = $file->getPathName();
             $p = str_replace($path, "", $p);    // Remove base path
             $p = str_replace("/", "\\", $p);    // Change / into \
@@ -452,11 +461,12 @@ class HTRouter {
         $request->setUser("");
 
         // Query arguments
-        if (isset($_SERVER['QUERY_STRING'])) {
+        if(isset($_SERVER['QUERY_STRING'])){
             parse_str($_SERVER['QUERY_STRING'], $args);
         } else {
             $args = array();
         }
+
         $request->setArgs($args);
 
         $request->setContentEncoding("");
@@ -502,6 +512,7 @@ class HTRouter {
 
         $request->setMethod($_SERVER['REQUEST_METHOD']);
         $request->setProtocol($_SERVER['SERVER_PROTOCOL']);
+        $request->setIp($_SERVER['REMOTE_ADDR']);
         $request->setStatus(\HTRouter::STATUS_HTTP_OK);
 
         if (! isset($_SERVER['PATH_INFO'])) {

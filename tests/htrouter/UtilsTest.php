@@ -120,8 +120,8 @@ class utilsTest extends PHPUnit_Framework_TestCase {
     function testDoesIsUrlFunction() {
         $this->assertTrue($this->_utils->isUrl("http://www.google.com"));
         $this->assertFalse($this->_utils->isUrl("://1"));
-        $this->assertTrue($this->_utils->isUrl("1"));
-        $this->assertTrue($this->_utils->isUrl("test"));
+        $this->assertFalse($this->_utils->isUrl("1"));
+        $this->assertFalse($this->_utils->isUrl("test"));
     }
 
     function testDoesfetchDirectiveFlagsFunction() {
